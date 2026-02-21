@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         body {
             font-family: 'Zen Maru Gothic', sans-serif;
@@ -120,17 +121,6 @@
             .no-print {
                 display: none !important;
             }
-        }
-        .mic-listening {
-            animation: pulse-red 1.5s infinite;
-            background-color: #fee2e2;
-            border-color: #ef4444;
-            color: #ef4444;
-        }
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
     </style>
 </head>
@@ -264,11 +254,26 @@
                         <h3 class="font-bold text-orange-700 mb-2 flex items-center gap-2">
                             <i class="fa-solid fa-pen-to-square"></i> 資料編輯區 (Data Editor)
                         </h3>
-                        <p class="text-xs text-orange-600 mb-2">
+                        <p class="text-xs text-orange-600 mb-4">
                             請將單字資料貼入下方。格式：英文 | 音節切分 | 音標 | 中文<br>
                             可使用 <strong># Reading</strong> 來標記閱讀單字的開始位置。<br>
                             (若要在 Google Site 永久生效，請複製下方文字並取代程式碼中的 `unitData` 內容)
                         </p>
+                        
+                        <!-- PDF Import Section -->
+                        <div class="mb-4 p-4 bg-white rounded-lg border border-orange-200">
+                            <label class="block text-sm font-bold text-orange-700 mb-2">
+                                <i class="fa-solid fa-file-pdf"></i> 匯入單字 PDF 檔 (自動分類單元)
+                            </label>
+                            <p class="text-xs text-gray-500 mb-3">
+                                為確保自動分類成功，PDF 內文需包含 <strong>Unit 1</strong> 等單元標題。系統會自動嘗試將內容轉換為系統格式。
+                            </p>
+                            <input type="file" id="pdfUpload" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 transition cursor-pointer">
+                            <div id="pdf-loading" class="hidden text-sm text-orange-500 font-bold mt-2">
+                                <i class="fa-solid fa-spinner fa-spin"></i> 正在解析 PDF，請稍候...
+                            </div>
+                        </div>
+
                         <textarea id="teacherInput" class="w-full h-40 p-3 border border-orange-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-orange-400 mb-3"></textarea>
                         <div class="flex justify-end gap-2">
                             <button onclick="toggleTeacherMode()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
@@ -493,38 +498,54 @@
                     </div>
                 </div>
 
-                <!-- Level Select -->
-                <div id="t5-level-select" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 max-w-3xl mx-auto">
-                     <button onclick="startPingPong(1)" class="p-6 bg-white border-2 border-yellow-400 rounded-2xl shadow-lg hover:bg-yellow-50 hover:scale-105 transition group text-center flex flex-col items-center">
-                        <div class="w-12 h-12 bg-yellow-100 text-yellow-500 rounded-full flex items-center justify-center text-2xl mb-3 group-hover:bg-yellow-500 group-hover:text-white transition">
+                <!-- Google Sites / Iframe Warning -->
+                <div id="iframe-warning" class="hidden max-w-4xl mx-auto mb-8 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-xl shadow-sm text-left animate-fade-in">
+                    <div class="flex items-start gap-3">
+                        <i class="fa-solid fa-circle-info text-blue-500 text-xl mt-1"></i>
+                        <div>
+                            <h4 class="font-bold text-blue-800 mb-1">Google Sites 內嵌限制提醒</h4>
+                            <p class="text-blue-900 text-sm">
+                                偵測到您目前在內嵌網頁 (如 Google Sites) 中運行。因為平台安全限制，<strong>L3 與 L4 的口說麥克風功能可能會被強制阻擋</strong>。
+                            </p>
+                            <button onclick="window.open('https://jesamine-cpu.github.io/vocabulary-architect/', '_blank')" class="mt-3 px-4 py-2 bg-blue-500 text-white text-sm font-bold rounded-lg hover:bg-blue-600 transition shadow">
+                                <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i> 點此在新分頁完整開啟
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Level Select (4 Levels Grid) -->
+                <div id="t5-level-select" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 max-w-4xl mx-auto">
+                     <button onclick="startPingPong(1)" class="w-full p-6 bg-white border-2 border-yellow-300 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition group text-center">
+                        <div class="w-12 h-12 mx-auto bg-yellow-100 text-yellow-500 rounded-full flex items-center justify-center text-xl mb-4">
                              <i class="fa-solid fa-ear-listen"></i>
                         </div>
-                        <h3 class="text-lg font-bold text-gray-800">L1 聽音辨字</h3>
-                        <p class="text-xs text-gray-500">Listen & Choose Word</p>
+                        <h3 class="text-xl font-bold text-gray-800 mb-1">L1 聽音辨字</h3>
+                        <p class="text-xs text-gray-400">Listen & Choose Word</p>
                     </button>
-
-                    <button onclick="startPingPong(2)" class="p-6 bg-white border-2 border-purple-400 rounded-2xl shadow-lg hover:bg-purple-50 hover:scale-105 transition group text-center flex flex-col items-center">
-                        <div class="w-12 h-12 bg-purple-100 text-purple-500 rounded-full flex items-center justify-center text-2xl mb-3 group-hover:bg-purple-500 group-hover:text-white transition">
+                    
+                     <button onclick="startPingPong(2)" class="w-full p-6 bg-white border-2 border-purple-300 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition group text-center">
+                        <div class="w-12 h-12 mx-auto bg-purple-400 text-white rounded-lg flex items-center justify-center text-xl mb-4">
                              <i class="fa-solid fa-language"></i>
                         </div>
-                        <h3 class="text-lg font-bold text-gray-800">L2 聽音辨義</h3>
-                        <p class="text-xs text-gray-500">Listen & Choose Meaning</p>
+                        <h3 class="text-xl font-bold text-gray-800 mb-1">L2 聽音辨義</h3>
+                        <p class="text-xs text-gray-400">Listen & Choose Meaning</p>
                     </button>
 
-                    <button onclick="startPingPong(3)" class="p-6 bg-white border-2 border-blue-400 rounded-2xl shadow-lg hover:bg-blue-50 hover:scale-105 transition group text-center flex flex-col items-center">
-                        <div class="w-12 h-12 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center text-2xl mb-3 group-hover:bg-blue-500 group-hover:text-white transition">
+                     <button onclick="startPingPong(3)" class="w-full p-6 bg-blue-50 border-2 border-blue-300 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition group text-center">
+                        <div class="w-12 h-12 mx-auto bg-blue-500 text-white rounded-full flex items-center justify-center text-xl mb-4">
                              <i class="fa-solid fa-microphone"></i>
                         </div>
-                        <h3 class="text-lg font-bold text-gray-800">L3 看英說英</h3>
-                        <p class="text-xs text-gray-500">See Word, Speak English</p>
+                        <h3 class="text-xl font-bold text-gray-800 mb-1">L3 看英說英</h3>
+                        <p class="text-xs text-gray-400">See Word, Speak English</p>
                     </button>
 
-                    <button onclick="startPingPong(4)" class="p-6 bg-white border-2 border-red-400 rounded-2xl shadow-lg hover:bg-red-50 hover:scale-105 transition group text-center flex flex-col items-center">
-                        <div class="w-12 h-12 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-2xl mb-3 group-hover:bg-red-500 group-hover:text-white transition">
-                             <i class="fa-solid fa-microphone-lines"></i>
+                     <button onclick="startPingPong(4)" class="w-full p-6 bg-white border-2 border-red-400 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition group text-center">
+                        <div class="w-12 h-12 mx-auto bg-red-100 text-red-500 rounded-full flex items-center justify-center text-xl mb-4">
+                             <i class="fa-solid fa-microphone"></i>
                         </div>
-                        <h3 class="text-lg font-bold text-gray-800">L4 看中說英</h3>
-                        <p class="text-xs text-gray-500">See Chinese, Speak English</p>
+                        <h3 class="text-xl font-bold text-gray-800 mb-1">L4 看中說英</h3>
+                        <p class="text-xs text-gray-400">See Chinese, Speak English</p>
                     </button>
                 </div>
 
@@ -564,17 +585,16 @@
                             <!-- Options injected by JS -->
                         </div>
 
-                        <!-- Speech Interface (Visible for L3 & L4) -->
-                        <div id="t5-speech-interface" class="w-full mt-4 hidden text-center">
-                            <button id="t5-mic-btn" onclick="toggleListening()" class="w-20 h-20 rounded-full bg-red-50 text-red-500 border-2 border-red-200 text-3xl shadow-md hover:bg-red-100 hover:scale-105 transition flex items-center justify-center mx-auto mb-4">
+                        <!-- Microphone Container (Visible for L3 & L4) -->
+                        <div id="t5-mic-container" class="hidden flex-col items-center justify-center w-full mt-4">
+                            <button id="t5-mic-btn" onclick="toggleMicrophone()" class="relative w-20 h-20 rounded-full bg-gray-100 text-gray-500 text-3xl hover:bg-gray-200 transition-colors shadow-sm focus:outline-none flex items-center justify-center z-10">
                                 <i class="fa-solid fa-microphone"></i>
                             </button>
-                            <p id="t5-speech-status" class="text-gray-400 text-sm h-6">Tap mic to speak</p>
-                            <div id="t5-speech-feedback" class="text-lg font-bold text-gray-800 mt-2 min-h-[1.75rem]"></div>
+                            <div id="t5-spoken-text" class="mt-4 text-sm font-bold text-gray-600 hidden bg-gray-50 px-4 py-2 rounded-lg border border-gray-200 max-w-full break-words"></div>
                         </div>
 
                         <!-- Play Audio Button for L1/L2 Manual Replay -->
-                        <button id="t5-audio-replay-btn" onclick="playCurrentT5Word()" class="hidden mt-4 text-gray-400 hover:text-blue-500 text-sm">
+                        <button id="t5-audio-replay-btn" onclick="playCurrentT5Word()" class="hidden mt-6 text-gray-400 hover:text-blue-500 text-sm">
                             <i class="fa-solid fa-volume-high"></i> 重聽發音
                         </button>
 
@@ -594,7 +614,7 @@
                     <div class="inline-block bg-yellow-100 text-yellow-700 px-8 py-4 rounded-full font-bold text-xl shadow-lg border-2 border-yellow-200 mb-8">
                         <i class="fa-solid fa-star"></i> Level Complete!
                     </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4" id="t5-completion-title">挑戰成功！</h3>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4" id="t5-completion-title">Level 1 挑戰成功！</h3>
                     <p class="text-gray-500 mb-8" id="t5-completion-msg">接下來進入下一關。</p>
                     <button id="t5-next-level-btn" onclick="startNextLevel()" class="px-10 py-4 bg-orange-500 text-white rounded-full hover:bg-orange-600 font-bold transition shadow-xl text-lg animate-bounce w-full md:w-auto">
                         進入下一關 <i class="fa-solid fa-arrow-right ml-2"></i>
@@ -604,7 +624,7 @@
                 <!-- Final Completion Screen -->
                 <div id="t5-final-completion" class="hidden text-center mt-8">
                     <div class="inline-block bg-green-100 text-green-700 px-8 py-4 rounded-full font-bold text-xl animate-bounce shadow-lg border-2 border-green-200">
-                        <i class="fa-solid fa-medal"></i> Ping Pong Master! 四關卡制霸！
+                        <i class="fa-solid fa-medal"></i> Ping Pong Master! 四關卡完全制霸！
                     </div>
                     <div class="mt-8 flex flex-col md:flex-row justify-center gap-4">
                         <button onclick="switchTab('task6')" class="px-8 py-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 font-bold transition shadow-lg">
@@ -648,8 +668,6 @@
                                 <p class="text-gray-400 text-sm">點擊播放發音 (Click to listen)</p>
                             </div>
 
-                            <!-- REMOVED THE MEANING HINT HERE -->
-                            
                             <div class="mb-6 relative max-w-xs mx-auto">
                                 <input type="text" id="t6-input" class="w-full text-center text-3xl font-bold text-gray-800 border-b-4 border-gray-300 focus:border-indigo-500 focus:outline-none py-2 bg-transparent uppercase tracking-widest placeholder-gray-200" placeholder="TYPE HERE" autocomplete="off">
                                 <div id="t6-feedback-text" class="h-6 text-red-500 text-sm font-bold mt-2 opacity-0 transition-opacity">Try again!</div>
@@ -678,7 +696,7 @@
             </section>
 
              <!-- TASK 7 (Formerly 6) -->
-             <section id="task7" class="tab-content hidden max-w-4xl mx-auto">
+             <section id="task7" class="tab-content hidden max-w-5xl mx-auto">
                 
                 <div class="mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg shadow-sm flex items-start gap-4">
                     <div class="bg-blue-100 p-3 rounded-full text-blue-600 shrink-0">
@@ -715,11 +733,11 @@
                             <div class="text-2xl font-bold text-green-600" id="report-mastery">0%</div>
                         </div>
                         <div class="bg-yellow-50 p-4 rounded-xl text-center border border-yellow-200">
-                            <div class="text-sm text-yellow-600">綜合挑戰</div>
+                            <div class="text-sm text-yellow-600">聽力口說綜合 (T5)</div>
                             <div class="text-2xl font-bold text-yellow-600" id="report-speech">0%</div>
                         </div>
                          <div class="bg-indigo-50 p-4 rounded-xl text-center border border-indigo-200">
-                            <div class="text-sm text-indigo-600">拼字完成</div>
+                            <div class="text-sm text-indigo-600">拼字完成度 (T6)</div>
                             <div class="text-2xl font-bold text-indigo-600" id="report-spelling">0%</div>
                         </div>
                     </div>
@@ -731,7 +749,7 @@
                                     <th class="p-3 font-bold text-teal-800 w-1/4">單字 (Word)</th>
                                     <th class="p-3 font-bold text-teal-800 text-center">音節 (T1)</th>
                                     <th class="p-3 font-bold text-teal-800 text-center">自評 (T3)</th>
-                                    <th class="p-3 font-bold text-teal-800 text-center">綜合 (T5)</th>
+                                    <th class="p-3 font-bold text-teal-800 text-center">聽說綜合 (T5)</th>
                                     <th class="p-3 font-bold text-teal-800 text-center">拼字 (T6)</th>
                                 </tr>
                             </thead>
@@ -741,6 +759,8 @@
                     </div>
 
                     <div class="mt-8 pt-6 border-t border-gray-100 text-center space-y-2">
+                        <p class="text-gray-600 font-bold">Great Job! Keep learning.</p>
+                        <p class="text-lg text-blue-600 font-bold mt-2">接下來請完成Google Classroom 的作業。</p>
                         <p class="text-xs text-gray-400">請將此頁面列印或存為 PDF，並上傳至 Google Classroom。</p>
                     </div>
                 </div>
@@ -757,6 +777,17 @@
 
     <!-- JavaScript Logic -->
     <script>
+        // --- SAFE STORAGE WRAPPER ---
+        const memoryStorage = {};
+        function safeSetItem(key, value) {
+            try { localStorage.setItem(key, value); } 
+            catch(e) { memoryStorage[key] = value; console.warn("Using in-memory storage due to sandbox limits."); }
+        }
+        function safeGetItem(key) {
+            try { return localStorage.getItem(key) || memoryStorage[key]; } 
+            catch(e) { return memoryStorage[key] || null; }
+        }
+
         // --- DATA CONFIGURATION ---
         const unitData = {
             "U1": `foreign | for/eign | [ˈfɔrən] | 外國的
@@ -776,8 +807,8 @@ medium | me/di/um | [ˈmidiəm] | 五分熟;中等的
 meat | meat | [mit] | 肉
 smell | smell | [smɛl] | 聞起來;氣味
 taste | taste | [test] | 嚐起來;味道
-as... as... | as as | [æz æz] | 如同...一樣...
-get around | get a/round | [gɛt əˈraʊnd] | 各處旅行
+as... as... | as/as | [æz æz] | 如同...一樣...
+get around | get/a/round | [gɛt əˈraʊnd] | 各處旅行
 dish | dish | [dɪʃ] | 菜餚
 more | more | [mɔr] | 更...
 get | get | [gɛt] | 變成
@@ -789,7 +820,7 @@ fork | fork | [fɔrk] | 叉子
 noodle | noo/dle | [ˈnudl] | 麵
 chopsticks | chop/sticks | [ˈtʃɑpˌstɪks] | 筷子
 spoon | spoon | [spun] | 湯匙
-fried chicken | fried chick/en | [fraɪd ˈtʃɪkən] | 炸雞
+fried chicken | fried/chick/en | [fraɪd ˈtʃɪkən] | 炸雞
 waiter | wait/er | [ˈwetɚ] | 男服務生
 strawberry | straw/ber/ry | [ˈstrɔˌbɛri] | 草莓
 bun | bun | [bʌn] | 小圓麵包
@@ -805,14 +836,14 @@ comfortable | com/fort/a/ble | [ˈkʌmfɚtəb!] | 舒適的
 fill | fill | [fɪl] | 充滿;裝滿
 pack | pack | [pæk] | 打包;塞進`,
             "U2": `grass | grass | [græs] | 草地
-red fire ant | red fire ant | [rɛd faɪr ænt] | 紅火蟻
+red fire ant | red/fire/ant | [rɛd faɪr ænt] | 紅火蟻
 dangerous | dan/ger/ous | [ˈdendʒərəs] | 危險的
 bite | bite | [baɪt] | 咬;咬(傷)
 death | death | [dɛθ] | 死亡
 kick | kick | [kɪk] | 踢
 themselves | them/selves | [ðəmˈsɛlvz] | 他們自己
 kill | kill | [kɪl] | 殺死
-stay away from | stay a/way from | [ste əˈwe frɑm] | 遠離...
+stay away from | stay/a/way/from | [ste əˈwe frɑm] | 遠離...
 agree | a/gree | [əˈgri] | 同意
 circle | cir/cle | [ˈsɜrk!] | 圓圈
 myself | my/self | [maɪˈsɛlf] | 我自己
@@ -822,7 +853,7 @@ scary | scar/y | [ˈskɛri] | 令人害怕的
 deep | deep | [dip] | 深的
 true | true | [tru] | 真實的
 most | most | [most] | 最...
-give a hand | give a hand | [gɪv ə hænd] | 幫助...
+give a hand | give/a/hand | [gɪv ə hænd] | 幫助...
 spider | spi/der | [ˈspaɪdɚ] | 蜘蛛
 gram | gram | [græm] | 公克
 insect | in/sect | [ˈɪnsɛkt] | 昆蟲
@@ -832,7 +863,7 @@ wide | wide | [waɪd] | 寬的
 kilogram | kil/o/gram | [ˈkɪləˌgræm] | 公斤
 nature | na/ture | [ˈnetʃɚ] | 大自然
 below | be/low | [bəˈlo] | 在...之下
-sea level | sea lev/el | [si ˈlɛv!] | 海平面
+sea level | sea/lev/el | [si ˈlɛv!] | 海平面
 mile | mile | [maɪl] | 英里
 feet | feet | [fit] | 英尺
 # Reading
@@ -854,7 +885,7 @@ dirty | dirt/y | [ˈdɜrti] | 髒的
 bow | bow | [baʊ] | 鞠躬
 without | with/out | [wɪˈðaʊt] | 沒有
 quickly | quick/ly | [ˈkwɪkli] | 快地
-web page | web page | [ˈwɛb ˌpedʒ] | 網頁
+web page | web/page | [ˈwɛb ˌpedʒ] | 網頁
 service | serv/ice | [ˈsɜrvɪs] | 服務
 wise | wise | [waɪz] | 明智的
 cheer | cheer | [tʃɪr] | 歡呼
@@ -899,12 +930,12 @@ radio | ra/di/o | [ˈrediˌo] | 收音機
 news | news | [njuz] | 新聞
 if | if | [ɪf] | 如果
 or | or | [ɔr] | 否則
-have to | have to | [ˈhæv tə] | 必須
-go out | go out | [go aʊt] | 熄滅
+have to | have/to | [ˈhæv tə] | 必須
+go out | go/out | [go aʊt] | 熄滅
 train | train | [tren] | 訓練
 face | face | [fes] | 面對
-try one's best | try one's best | [traɪ wʌnz bɛst] | 盡力而為
-turn on | turn on | [tɜrn ɑn] | 打開
+try one's best | try/one's/best | [traɪ wʌnz bɛst] | 盡力而為
+turn on | turn/on | [tɜrn ɑn] | 打開
 latest | lat/est | [ˈletɪst] | 最新的
 star | star | [stɑr] | 星星
 shine | shine | [ʃaɪn] | 閃耀
@@ -928,11 +959,11 @@ as | as | [æz] | 作為;如同
 times | times | [taɪmz] | 倍`,
             "U5": `although | al/though | [ɔlˈðo] | 雖然
 matter | mat/ter | [ˈmætɚ] | 問題
-sore throat | sore throat | [sor θrot] | 喉嚨痛
+sore throat | sore/throat | [sor θrot] | 喉嚨痛
 explain | ex/plain | [ɪkˈsplen] | 解釋
-cough | cough | [kɔf] | 咳嗽
+cough | cough | [kkɔf] | 咳嗽
 probably | prob/a/bly | [ˈprɑbəbli] | 很可能
-take care of | take care of | [tek kɛr ʌv] | 照顧
+take care of | take/care/of | [tek kɛr ʌv] | 照顧
 noon | noon | [nun] | 中午
 both | both | [boθ] | 兩者(都)
 medicine | med/i/cine | [ˈmɛdəsn] | 藥
@@ -940,7 +971,7 @@ honey | hon/ey | [ˈhʌni] | 蜂蜜
 lemon | lem/on | [ˈlɛmən] | 檸檬
 useful | use/ful | [ˈjusfəl] | 有用的
 stand | stand | [stænd] | 攤位
-feel like | feel like | [fil laɪk] | 想要
+feel like | feel/like | [fil laɪk] | 想要
 cold | cold | [kold] | 感冒
 well | well | [wɛl] | 健康的
 treat | treat | [trit] | 治療
@@ -948,7 +979,7 @@ head | head | [hɛd] | 頭
 headache | head/ache | [ˈhɛdˌek] | 頭痛
 stomachache | stom/ach/ache | [ˈstʌməkˌek] | 胃痛
 fever | fe/ver | [ˈfivɚ] | 發燒
-runny nose | run/ny nose | [ˈrʌni noz] | 流鼻水
+runny nose | run/ny/nose | [ˈrʌni noz] | 流鼻水
 knee | knee | [ni] | 膝蓋
 nail | nail | [nel] | 指甲
 finger | fin/ger | [ˈfɪŋgɚ] | 手指
@@ -961,7 +992,7 @@ actually | ac/tual/ly | [ˈæktʃʊəli] | 實際上
 helpful | help/ful | [ˈhɛlpfəl] | 有幫助的
 root | root | [rut] | 根
 reason | rea/son | [ˈrizn] | 原因
-power up | pow/er up | [ˈpaʊɚ ʌp] | 增強力量
+power up | pow/er/up | [ˈpaʊɚ ʌp] | 增強力量
 sweet | sweet | [swit] | 甜食
 sharp | sharp | [ʃɑrp] | 敏銳的`,
             "U6": `pass | pass | [pæs] | 傳遞
@@ -976,14 +1007,14 @@ test | test | [tɛst] | 考試
 afraid | a/fraid | [əˈfred] | 害怕的
 forget | for/get | [fɚˈgɛt] | 忘記
 fresh | fresh | [frɛʃ] | 新鮮的
-count in | count in | [kaʊnt ɪn] | 算...一份
+count in | count/in | [kaʊnt ɪn] | 算...一份
 begin | be/gin | [bɪˈgɪn] | 開始
 meeting | meet/ing | [ˈmitɪŋ] | 會議
-come on | come on | [kʌm ɑn] | 快點
+come on | come/on | [kʌm ɑn] | 快點
 excuse | ex/cuse | [ɪkˈskjus] | 藉口
-around the corner | a/round the cor/ner | [əˈraʊnd ðə ˈkɔrnɚ] | 即將來臨
+around the corner | a/round/the/cor/ner | [əˈraʊnd ðə ˈkɔrnɚ] | 即將來臨
 grade | grade | [gred] | 成績
-hold back | hold back | [hold bæk] | 阻礙
+hold back | hold/back | [hold bæk] | 阻礙
 few | few | [fju] | 很少
 simple | sim/ple | [ˈsɪmp!] | 簡單的
 expect | ex/pect | [ɪkˈspɛkt] | 預計
@@ -991,32 +1022,34 @@ mistake | mis/take | [mɪˈstek] | 錯誤
 angle | an/gle | [ˈæŋg!] | 角度
 allow | al/low | [əˈlaʊ] | 允許
 laugh | laugh | [læf] | 笑
-keep in mind | keep in mind | [kip ɪn maɪnd] | 記住
+keep in mind | keep/in/mind | [kip ɪn maɪnd] | 記住
 # Reading
 honest | hon/est | [ˈɑnɪst] | 誠實的
-lead to | lead to | [lid tu] | 導致
+lead to | lead/to | [lid tu] | 導致
 push | push | [pʊʃ] | 推
 excellent | ex/cel/lent | [ˈɛkslənt] | 優秀的
-be able to | be a/ble to | [bi ˈeb! tu] | 能夠
+be able to | be/a/ble/to | [bi ˈeb! tu] | 能夠
 define | de/fine | [dɪˈfaɪn] | 下定義
 matter | mat/ter | [ˈmætɚ] | 重要
 picture | pic/ture | [ˈpɪktʃɚ] | 想像
-as for | as for | [æz fɔr] | 至於
-to the full | to the full | [tu ðə fʊl] | 盡可能`
+as for | as/for | [æz fɔr] | 至於
+to the full | to/the/full | [tu ðə fʊl] | 盡可能`
         };
 
         // Current State
         let currentUnit = "U6";
         let currentVocabType = "all";
-        let currentStudentId = ""; 
+        let currentStudentId = ""; // To store student name/ID
         let vocabList = [];
         let t1CurrentIndex = 0;
         let t5CurrentIndex = 0;
         let t6CurrentIndex = 0;
         let t5SpeechLevel = 1; 
         let t5Processing = false;
-        let isRecognizing = false; // Add this to track state
+        
+        // Speech Recognition Setup
         let recognition;
+        let isListening = false;
 
         const demoSuggestions = {
             // Unit 6
@@ -1074,11 +1107,55 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
             const today = new Date();
             document.getElementById('report-date').innerText = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
             
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                document.getElementById('browser-warning').classList.remove('hidden');
+            // Check if running in an iframe (e.g., Google Sites)
+            if (window.self !== window.top) {
+                document.getElementById('iframe-warning').classList.remove('hidden');
+            }
+            
+            // Initialize Speech Recognition
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRec();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = function(event) {
+                    const result = event.results[0][0].transcript;
+                    checkSpeechResult(result);
+                };
+                recognition.onerror = function(event) {
+                    console.error("Speech recognition error", event.error);
+                    stopListeningUI();
+                    
+                    // Add handling for 'aborted' error
+                    if (event.error === 'aborted') {
+                        console.log("Speech recognition was manually stopped.");
+                    } else if(event.error === 'not-allowed') {
+                        let msg = "⚠️ 無法存取麥克風！\n\n1. 請確認您已允許瀏覽器的麥克風權限。\n2. 若您是在 Google Site (協作平台) 內瀏覽，系統會阻擋麥克風，請點擊上方的「在新分頁完整開啟」按鈕來使用。";
+                        alert(msg);
+                        document.getElementById('t5-sub-text').innerText = "麥克風權限被阻擋 🚫";
+                    } else {
+                        document.getElementById('t5-sub-text').innerText = "辨識失敗，請再試一次！";
+                    }
+                };
+                recognition.onend = function() {
+                    // Check if it's currently marked as listening before stopping UI
+                    if(isListening){
+                        stopListeningUI();
+                    }
+                };
             } else {
-                setupSpeechRecognition();
+                document.getElementById('browser-warning').classList.remove('hidden');
+            }
+
+            // Init PDF.js Worker
+            if (window.pdfjsLib) {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                const pdfUpload = document.getElementById('pdfUpload');
+                if (pdfUpload) {
+                    pdfUpload.addEventListener('change', handlePDFUpload);
+                }
             }
 
             loadUnitData('U6');
@@ -1090,99 +1167,6 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
                 }
             });
         };
-
-        function setupSpeechRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) return;
-
-            recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-
-            // TRACK STATE
-            recognition.onstart = function() {
-                isRecognizing = true;
-                document.getElementById('t5-mic-btn').classList.add('mic-listening');
-                document.getElementById('t5-speech-status').innerText = "Listening...";
-                document.getElementById('t5-speech-feedback').innerText = "";
-            };
-
-            recognition.onend = function() {
-                isRecognizing = false;
-                document.getElementById('t5-mic-btn').classList.remove('mic-listening');
-                if (!t5Processing) {
-                     document.getElementById('t5-speech-status').innerText = "Tap mic to speak";
-                }
-            };
-
-            recognition.onresult = function(event) {
-                const transcript = event.results[0][0].transcript.toLowerCase().trim();
-                const statusEl = document.getElementById('t5-speech-status');
-                
-                statusEl.innerText = "Processing...";
-                checkSpeechResult(transcript);
-            };
-
-            recognition.onspeechend = function() {
-                recognition.stop();
-            };
-
-            recognition.onerror = function(event) {
-                // Ignore 'no-speech' errors often caused by silence or quick toggles
-                if (event.error !== 'no-speech') {
-                     document.getElementById('t5-speech-status').innerText = "Error: " + event.error;
-                }
-            };
-        }
-
-        function toggleListening() {
-            if(!recognition) {
-                alert("Sorry, your browser doesn't support speech recognition.");
-                return;
-            }
-            
-            if(t5Processing) return;
-
-            if (isRecognizing) {
-                recognition.stop();
-                return;
-            }
-
-            try {
-                recognition.start();
-            } catch(e) {
-                console.warn("Recognition start failed:", e);
-                // If invalid state error occurs (e.g. rapid clicking), force flag reset or just log
-                if (e.name === 'InvalidStateError') {
-                    isRecognizing = true; // Assume it's running if error says so
-                }
-            }
-        }
-
-        function checkSpeechResult(transcript) {
-            const item = vocabList[t5CurrentIndex];
-            const targetWord = item.word.toLowerCase().trim();
-            const feedbackEl = document.getElementById('t5-speech-feedback');
-            const micBtn = document.getElementById('t5-mic-btn');
-
-            // Simple exact match check, can be improved with fuzzy matching
-            // Removing punctuation from transcript just in case
-            const cleanTranscript = transcript.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-
-            if (cleanTranscript === targetWord || cleanTranscript.includes(targetWord)) {
-                feedbackEl.innerText = `Correct! (${transcript})`;
-                feedbackEl.classList.remove('text-red-500');
-                feedbackEl.classList.add('text-green-500');
-                handlePingPongSuccess();
-            } else {
-                feedbackEl.innerText = `I heard: "${transcript}". Try again!`;
-                feedbackEl.classList.add('text-red-500');
-                feedbackEl.classList.remove('text-green-500');
-                micBtn.classList.add('animate-shake');
-                setTimeout(() => micBtn.classList.remove('animate-shake'), 500);
-            }
-        }
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -1214,6 +1198,134 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
             alert("單字已更新！(注意：此更新僅限本次使用，若要在 Google Site 永久生效，請複製文字並修改原始碼中的 unitData)");
         }
 
+        async function handlePDFUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('pdf-loading').classList.remove('hidden');
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = '';
+                
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    
+                    let lastY = -1;
+                    let textItems = [];
+                    // 根據垂直座標 (Y) 與水平座標 (X) 排序文字，還原閱讀順序
+                    const items = textContent.items.sort((a, b) => {
+                        if (Math.abs(b.transform[5] - a.transform[5]) > 5) {
+                            return b.transform[5] - a.transform[5]; // 由上到下
+                        }
+                        return a.transform[4] - b.transform[4]; // 由左到右
+                    });
+
+                    for (const item of items) {
+                        if (lastY !== -1 && Math.abs(lastY - item.transform[5]) > 5) {
+                            textItems.push('\n');
+                        }
+                        textItems.push(item.str);
+                        lastY = item.transform[5];
+                    }
+                    fullText += textItems.join(' ') + '\n';
+                }
+
+                parseImportedText(fullText);
+                
+            } catch (error) {
+                console.error(error);
+                alert("PDF 解析失敗，請確定檔案沒有加密或損毀。\n" + error.message);
+            } finally {
+                document.getElementById('pdf-loading').classList.add('hidden');
+                e.target.value = ''; // 重置 file input
+            }
+        }
+
+        function parseImportedText(text) {
+            const lines = text.split('\n');
+            let currentParseUnit = document.getElementById('unitSelector').value; 
+            let parsedData = { ...unitData }; 
+            let currentBuffer = [];
+            const foundUnits = new Set();
+            let hasValidData = false;
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+
+                // 偵測單元 (例如 "Unit 1", "UNIT 2")
+                const unitMatch = trimmed.match(/^Unit\s*(\d+)/i);
+                if (unitMatch) {
+                    if (currentBuffer.length > 0 && hasValidData) {
+                        parsedData[currentParseUnit] = currentBuffer.join('\n');
+                    }
+                    const unitNum = unitMatch[1];
+                    currentParseUnit = 'U' + unitNum;
+                    
+                    if(!parsedData[currentParseUnit]) parsedData[currentParseUnit] = "";
+                    
+                    currentBuffer = [];
+                    foundUnits.add(currentParseUnit);
+                    hasValidData = false;
+                    return;
+                }
+
+                // 偵測範圍標記
+                if (trimmed.toLowerCase() === '# reading' || trimmed.toLowerCase() === '# dialogue') {
+                    currentBuffer.push(trimmed);
+                    return;
+                }
+
+                // 若單字間有大量連續空白 (大於等於3個空白)，自動取代為 | 符號以符合系統格式
+                let processedLine = trimmed;
+                if (!processedLine.includes('|')) {
+                    processedLine = processedLine.replace(/\s{3,}/g, ' | ');
+                }
+
+                // 判斷是否為合格的單字列或標記列
+                if (processedLine.includes('|') || processedLine.startsWith('#')) {
+                     currentBuffer.push(processedLine);
+                     hasValidData = true;
+                     foundUnits.add(currentParseUnit);
+                }
+            });
+
+            // 儲存最後緩衝區中的單元
+            if (currentBuffer.length > 0 && hasValidData) {
+                parsedData[currentParseUnit] = currentBuffer.join('\n');
+            }
+
+            if (foundUnits.size > 0) {
+                // 將解析後的資料覆寫進全域變數
+                Object.keys(parsedData).forEach(k => {
+                    unitData[k] = parsedData[k];
+                });
+                
+                // 動態增加不存在的 Unit 選項到下拉選單
+                const selector = document.getElementById('unitSelector');
+                Array.from(foundUnits).forEach(u => {
+                    let exists = Array.from(selector.options).some(opt => opt.value === u);
+                    if(!exists) {
+                        const opt = document.createElement('option');
+                        opt.value = u;
+                        opt.text = 'Unit ' + u.replace('U', '');
+                        selector.appendChild(opt);
+                    }
+                });
+
+                alert("成功從 PDF 擷取單字！\n偵測到單元：" + Array.from(foundUnits).join(', ') + "\n請在下方文字方塊檢查格式，確認無誤後點擊「儲存並更新」。");
+                selector.value = Array.from(foundUnits)[0];
+                document.getElementById('teacherInput').value = unitData[selector.value];
+            } else {
+                // 若格式太亂無法自動分類，則純文字貼上讓老師手動處理
+                document.getElementById('teacherInput').value += '\n' + text;
+                alert("未能自動偵測到標準的單字格式或 Unit 標籤。\n已將擷取的原始文字附加至文字方塊中，請手動調整排版。");
+            }
+        }
+
         function changeUnit() {
             const selector = document.getElementById('unitSelector');
             const unit = selector.value;
@@ -1236,8 +1348,6 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
             loadUnitData(currentUnit);
         }
 
-        // --- NEW STORAGE FUNCTIONS ---
-
         function getStorageKey() {
             return `VA_Data_${currentStudentId}_${currentUnit}`;
         }
@@ -1255,13 +1365,13 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
                 passedLevel4: item.passedLevel4,
                 spellingCompleted: item.spellingCompleted
             }));
-            localStorage.setItem(getStorageKey(), JSON.stringify(dataToSave));
+            safeSetItem(getStorageKey(), JSON.stringify(dataToSave));
             console.log("Progress saved for " + currentStudentId);
         }
 
         function loadProgress() {
             if (!currentStudentId) return;
-            const savedJson = localStorage.getItem(getStorageKey());
+            const savedJson = safeGetItem(getStorageKey());
             if (savedJson) {
                 const savedData = JSON.parse(savedJson);
                 // Merge saved data into current vocabList based on word matching
@@ -1349,7 +1459,7 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
                 const parts = trimmedLine.split('|').map(s => s.trim());
                 if (parts.length >= 4) {
                     vocabList.push({
-                        id: vocabList.length, 
+                        id: vocabList.length, // Use array length as unique ID for current session
                         word: parts[0],
                         answer: parts[1], 
                         ipa: parts[2],
@@ -1362,7 +1472,7 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
                         passedLevel4: false,
                         spellingCompleted: false,
                         t1Completed: false,
-                        category: currentSection 
+                        category: currentSection // Store category
                     });
                 }
             });
@@ -1599,10 +1709,7 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
         
         function exitPingPong() {
              t5Processing = false;
-             if (recognition) {
-                 recognition.abort();
-                 isRecognizing = false; // Reset explicitly
-             }
+             stopListening(); // Make sure mic is turned off
              document.getElementById('t5-game-area').classList.add('hidden');
              document.getElementById('t5-level-completion').classList.add('hidden');
              document.getElementById('t5-final-completion').classList.add('hidden');
@@ -1624,10 +1731,81 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
             }
         }
 
+        // Speech Recognition Functions
+        function toggleMicrophone() {
+            if (t5Processing) return;
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+
+        function startListening() {
+            if (!recognition) {
+                alert("您的瀏覽器不支援語音辨識，建議使用 Chrome 或 Edge 瀏覽器進行口說任務。");
+                return;
+            }
+            try {
+                recognition.start();
+                isListening = true;
+                document.getElementById('t5-mic-btn').classList.add('listening-ring', 'bg-red-500', 'text-white');
+                document.getElementById('t5-mic-btn').classList.remove('bg-gray-100', 'text-gray-500');
+                document.getElementById('t5-sub-text').innerText = "Listening... 請說出英文單字";
+                document.getElementById('t5-spoken-text').classList.add('hidden');
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function stopListeningUI() {
+            isListening = false;
+            const micBtn = document.getElementById('t5-mic-btn');
+            if (micBtn) {
+                micBtn.classList.remove('listening-ring', 'bg-red-500', 'text-white');
+                micBtn.classList.add('bg-gray-100', 'text-gray-500');
+            }
+        }
+
+        function stopListening() {
+            if(recognition) {
+                // Aborting the recognition instead of stopping avoids triggering onend unexpectedly
+                // but we should set isListening false first so UI doesn't bug out
+                isListening = false; 
+                recognition.abort();
+            }
+            stopListeningUI();
+        }
+
+        function checkSpeechResult(transcript) {
+            if (t5Processing) return;
+            const item = vocabList[t5CurrentIndex];
+            const correctWord = item.word.toLowerCase().trim();
+            const userSaid = transcript.toLowerCase().trim().replace(/[^a-z\s]/g, '');
+
+            const spokenTextDiv = document.getElementById('t5-spoken-text');
+            spokenTextDiv.innerText = `You said: "${transcript}"`;
+            spokenTextDiv.classList.remove('hidden');
+
+            // Flexible match: exact match or user speech includes the word (or vice versa for close matches)
+            if (userSaid === correctWord || userSaid.includes(correctWord) || correctWord.includes(userSaid)) {
+                const micBtn = document.getElementById('t5-mic-btn');
+                micBtn.classList.add('bg-green-500', 'text-white');
+                micBtn.classList.remove('bg-red-500', 'bg-gray-100', 'listening-ring');
+                handlePingPongSuccess();
+            } else {
+                const card = document.getElementById('t5-card');
+                card.classList.add('animate-shake', 'border-red-400');
+                setTimeout(() => card.classList.remove('animate-shake', 'border-red-400'), 500);
+                document.getElementById('t5-sub-text').innerText = "Try again! 聽起來不太像喔，請再試一次。";
+            }
+        }
+
         function updateT5Card() {
             const card = document.getElementById('t5-card');
             const total = vocabList.length;
             t5Processing = false;
+            stopListeningUI(); // Reset mic state
 
             if (total === 0) return;
 
@@ -1635,8 +1813,13 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
             if(t5CurrentIndex >= total) {
                 document.getElementById('t5-game-area').classList.add('hidden');
                 if(t5SpeechLevel < 4) {
-                    const titles = ["", "L1 完成！", "L2 完成！", "L3 完成！"];
-                    const msgs = ["", "進入聽音辨義。", "進入看英說英。", "進入看中說英。"];
+                    const titles = ["", "Level 1 完成！", "Level 2 完成！", "Level 3 完成！"];
+                    const msgs = [
+                        "", 
+                        "你很棒！接下來進入 Level 2：聽音辨義。", 
+                        "太厲害了！接下來進入 Level 3：看英說英口說挑戰。",
+                        "發音很棒！接下來進入最終挑戰 Level 4：看中說英。"
+                    ];
                     document.getElementById('t5-completion-title').innerText = titles[t5SpeechLevel];
                     document.getElementById('t5-completion-msg').innerText = msgs[t5SpeechLevel];
                     document.getElementById('t5-level-completion').classList.remove('hidden');
@@ -1658,54 +1841,60 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
             const mainText = document.getElementById('t5-main-text');
             const subText = document.getElementById('t5-sub-text');
             const optionsGrid = document.getElementById('t5-options-grid');
-            const speechInterface = document.getElementById('t5-speech-interface');
             const replayBtn = document.getElementById('t5-audio-replay-btn');
+            
+            const micContainer = document.getElementById('t5-mic-container');
+            const spokenText = document.getElementById('t5-spoken-text');
+            spokenText.classList.add('hidden');
+            spokenText.innerText = '';
+            
+            // Reset mic button styling
+            const micBtn = document.getElementById('t5-mic-btn');
+            micBtn.className = "relative w-20 h-20 rounded-full bg-gray-100 text-gray-500 text-3xl hover:bg-gray-200 transition-colors shadow-sm focus:outline-none flex items-center justify-center z-10";
 
-            optionsGrid.classList.add('hidden');
-            speechInterface.classList.add('hidden');
-            replayBtn.classList.add('hidden');
 
             // Setup per Level
-            if (t5SpeechLevel === 1) { // Listen -> Choose Word
-                modeLabel.innerText = "Level 1: 聽音辨字 (Listen & Choose)";
-                mainText.innerHTML = '<i class="fa-solid fa-volume-high text-blue-500 animate-pulse"></i>';
+            if (t5SpeechLevel === 1) { // Listen -> Select Word
+                modeLabel.innerText = "Level 1: 聽音辨字 (Listen & Choose Word)";
+                mainText.innerHTML = '<i class="fa-solid fa-volume-high text-yellow-500 animate-pulse"></i>';
                 subText.innerText = "Listen and select the correct word.";
                 optionsGrid.classList.remove('hidden');
+                micContainer.classList.add('hidden');
                 generateOptions(item, 'word');
-                setTimeout(playCurrentT5Word, 500); 
-                replayBtn.classList.remove('hidden');
+                setTimeout(playCurrentT5Word, 500); // Auto play
+                replayBtn.classList.remove('hidden'); 
                 mainText.onclick = playCurrentT5Word;
                 mainText.style.cursor = 'pointer';
 
-            } else if (t5SpeechLevel === 2) { // Listen -> Choose Meaning
-                modeLabel.innerText = "Level 2: 聽音辨義 (Listen & Meaning)";
+            } else if (t5SpeechLevel === 2) { // Listen -> Select Meaning
+                modeLabel.innerText = "Level 2: 聽音辨義 (Listen & Choose Meaning)";
                 mainText.innerHTML = '<i class="fa-solid fa-volume-high text-purple-500 animate-pulse"></i>';
                 subText.innerText = "Listen and select the correct meaning.";
                 optionsGrid.classList.remove('hidden');
+                micContainer.classList.add('hidden');
                 generateOptions(item, 'meaning');
                 setTimeout(playCurrentT5Word, 500);
+                replayBtn.classList.remove('hidden');
                 mainText.onclick = playCurrentT5Word;
                 mainText.style.cursor = 'pointer';
-
-            } else if (t5SpeechLevel === 3) { // See Word -> Speak Word
-                modeLabel.innerText = "Level 3: 看英說英 (Read & Speak)";
+                
+            } else if (t5SpeechLevel === 3) { // See Word -> Speak
+                modeLabel.innerText = "Level 3: 看英說英 (See Word, Speak English)";
                 mainText.innerHTML = item.word;
-                subText.innerText = "Read the word aloud.";
-                speechInterface.classList.remove('hidden');
-                document.getElementById('t5-speech-status').innerText = "Tap mic to speak";
-                document.getElementById('t5-speech-feedback').innerText = "";
-                replayBtn.classList.remove('hidden');
+                subText.innerText = "點擊下方麥克風，大聲唸出這個單字！";
+                optionsGrid.classList.add('hidden');
+                replayBtn.classList.add('hidden');
+                micContainer.classList.remove('hidden');
                 mainText.onclick = null;
                 mainText.style.cursor = 'default';
-
-            } else if (t5SpeechLevel === 4) { // See Meaning -> Speak Word
-                modeLabel.innerText = "Level 4: 看中說英 (Translate & Speak)";
+                
+            } else if (t5SpeechLevel === 4) { // See Meaning -> Speak
+                modeLabel.innerText = "Level 4: 看中說英 (See Chinese, Speak English)";
                 mainText.innerHTML = item.meaning;
-                subText.innerText = "Say the English word.";
-                speechInterface.classList.remove('hidden');
-                document.getElementById('t5-speech-status').innerText = "Tap mic to speak";
-                document.getElementById('t5-speech-feedback').innerText = "";
-                replayBtn.classList.remove('hidden');
+                subText.innerText = "點擊下方麥克風，說出對應的英文單字！";
+                optionsGrid.classList.add('hidden');
+                replayBtn.classList.add('hidden');
+                micContainer.classList.remove('hidden');
                 mainText.onclick = null;
                 mainText.style.cursor = 'default';
             }
@@ -1719,6 +1908,7 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
             const grid = document.getElementById('t5-options-grid');
             grid.innerHTML = '';
             
+            // Pick 3 distractors
             let distractors = vocabList.filter(i => i.id !== correctItem.id);
             distractors.sort(() => Math.random() - 0.5);
             let options = distractors.slice(0, 3);
@@ -1760,13 +1950,12 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
             if(t5SpeechLevel === 2) item.passedLevel2 = true;
             if(t5SpeechLevel === 3) item.passedLevel3 = true;
             if(t5SpeechLevel === 4) item.passedLevel4 = true;
-            saveProgress(); 
+            saveProgress(); // SAVE
 
             card.classList.remove('bg-white', 'border-yellow-100');
             card.classList.add('bg-green-50', 'border-green-400');
             document.getElementById('t5-success-badge').classList.remove('hidden');
             
-            // Show word for L2/L4 feedback
             if(t5SpeechLevel === 2 || t5SpeechLevel === 4) {
                  document.getElementById('t5-main-text').innerHTML = item.word;
             }
@@ -1783,6 +1972,7 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
         // --- TASK 6: SPELLING BEE ---
         function initTask6() {
             t6CurrentIndex = 0;
+            // updateT6Display(); // Called by tab switch
         }
 
         function playCurrentT6Word() {
@@ -1822,6 +2012,7 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
             input.classList.remove('text-red-500');
             document.getElementById('t6-feedback-text').style.opacity = '0';
             
+            // Auto play audio after a slight delay
             setTimeout(playCurrentT6Word, 500);
         }
 
@@ -1834,8 +2025,9 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
             const correctAnswer = item.word.toLowerCase();
 
             if (userAnswer === correctAnswer) {
+                // Success
                 item.spellingCompleted = true;
-                saveProgress(); 
+                saveProgress(); // SAVE
                 showFirework('t6-firework-overlay');
                 feedback.innerText = "Correct!";
                 feedback.className = "h-6 text-green-500 text-sm font-bold mt-2 transition-opacity";
@@ -1846,6 +2038,7 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
                     updateT6Display();
                 }, 1200);
             } else {
+                // Fail
                 input.classList.add('animate-shake', 'text-red-500');
                 feedback.innerText = "Try again!";
                 feedback.className = "h-6 text-red-500 text-sm font-bold mt-2 transition-opacity";
@@ -1906,11 +2099,11 @@ to the full | to the full | [tu ðə fʊl] | 盡可能`
                         </span>
                     </td>
                     <td class="p-3 text-center">
-                        <div class="flex justify-center gap-1 flex-wrap">
-                            <span class="${item.passedLevel1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="L1:聽辨字">1</span>
-                            <span class="${item.passedLevel2 ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="L2:聽辨義">2</span>
-                            <span class="${item.passedLevel3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="L3:看英說英">3</span>
-                            <span class="${item.passedLevel4 ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="L4:看中說英">4</span>
+                        <div class="flex justify-center gap-1">
+                            <span class="${item.passedLevel1 ? 'bg-yellow-400 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 1">1</span>
+                            <span class="${item.passedLevel2 ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 2">2</span>
+                            <span class="${item.passedLevel3 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 3">3</span>
+                            <span class="${item.passedLevel4 ? 'bg-red-400 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 4">4</span>
                         </div>
                     </td>
                     <td class="p-3 text-center">
