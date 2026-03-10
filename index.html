@@ -8,6 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- 新增 html2pdf 函式庫來直接下載 PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body {
             font-family: 'Zen Maru Gothic', sans-serif;
@@ -284,15 +286,15 @@
                     <!-- Student Login -->
                     <div class="max-w-md mx-auto mb-6 text-left">
                         <label class="block text-sm font-bold text-gray-700 mb-2">
-                            <i class="fa-solid fa-user text-blue-500"></i> 學生姓名/座號 (Student Name/ID):
+                            <i class="fa-solid fa-user text-blue-500"></i> 學生姓名 (Student Name):
                         </label>
                         <div class="flex gap-2">
-                            <input type="text" id="studentNameInput" placeholder="請輸入名字或座號 (e.g., Alex 01)" class="w-full p-4 border-2 border-blue-200 rounded-xl text-xl font-bold text-gray-700 focus:border-blue-500 focus:ring-blue-200 transition bg-blue-50">
+                            <input type="text" id="studentNameInput" onkeypress="handleNameEnter(event)" placeholder="請輸入名字 (e.g., Alex)" class="w-full p-4 border-2 border-blue-200 rounded-xl text-xl font-bold text-gray-700 focus:border-blue-500 focus:ring-blue-200 transition bg-blue-50">
                             <button onclick="clearStudentData()" class="px-4 py-2 bg-gray-200 text-gray-500 rounded-xl hover:bg-gray-300 transition whitespace-nowrap" title="登出 / 清除欄位">
                                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
                             </button>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1 ml-1"><i class="fa-solid fa-circle-info"></i> 輸入相同名字會自動讀取上次進度 (Same name loads saved data)</p>
+                        <p class="text-xs text-gray-400 mt-1 ml-1"><i class="fa-solid fa-circle-info"></i> 輸入後按 Enter 即可登入 (Press Enter to login)</p>
                     </div>
 
                     <!-- Unit Selector -->
@@ -498,22 +500,6 @@
                     </div>
                 </div>
 
-                <!-- Google Sites / Iframe Warning -->
-                <div id="iframe-warning" class="hidden max-w-4xl mx-auto mb-8 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-xl shadow-sm text-left animate-fade-in">
-                    <div class="flex items-start gap-3">
-                        <i class="fa-solid fa-circle-info text-blue-500 text-xl mt-1"></i>
-                        <div>
-                            <h4 class="font-bold text-blue-800 mb-1">Google Sites 內嵌限制提醒</h4>
-                            <p class="text-blue-900 text-sm">
-                                偵測到您目前在內嵌網頁 (如 Google Sites) 中運行。因為平台安全限制，<strong>L3 與 L4 的口說麥克風功能可能會被強制阻擋</strong>。
-                            </p>
-                            <button onclick="window.open('https://jesamine-cpu.github.io/vocabulary-architect/', '_blank')" class="mt-3 px-4 py-2 bg-blue-500 text-white text-sm font-bold rounded-lg hover:bg-blue-600 transition shadow">
-                                <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i> 點此在新分頁完整開啟
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Level Select (4 Levels Grid) -->
                 <div id="t5-level-select" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 max-w-4xl mx-auto">
                      <button onclick="startPingPong(1)" class="w-full p-6 bg-white border-2 border-yellow-300 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition group text-center">
@@ -591,6 +577,8 @@
                                 <i class="fa-solid fa-microphone"></i>
                             </button>
                             <div id="t5-spoken-text" class="mt-4 text-sm font-bold text-gray-600 hidden bg-gray-50 px-4 py-2 rounded-lg border border-gray-200 max-w-full break-words"></div>
+                            <!-- 新增：強制通關按鈕 -->
+                            <button id="t5-skip-btn" onclick="forcePassPingPong()" class="mt-4 hidden text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 py-2 px-4 rounded-full transition font-bold shadow-sm"><i class="fa-solid fa-forward-step"></i> 辨識一直失敗？點此強制通關</button>
                         </div>
 
                         <!-- Play Audio Button for L1/L2 Manual Replay -->
@@ -723,10 +711,14 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                         <div class="bg-gray-50 p-4 rounded-xl text-center border border-gray-200">
                             <div class="text-sm text-gray-500">單字總數</div>
                             <div class="text-2xl font-bold text-gray-800" id="report-total">0</div>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-xl text-center border border-blue-200">
+                            <div class="text-sm text-blue-600">音節完成度 (T1)</div>
+                            <div class="text-2xl font-bold text-blue-600" id="report-t1-syllable">0%</div>
                         </div>
                         <div class="bg-green-50 p-4 rounded-xl text-center border border-green-200">
                             <div class="text-sm text-green-600">綠燈掌握度</div>
@@ -743,6 +735,9 @@
                     </div>
 
                     <div class="overflow-x-auto">
+                        <div class="text-right mb-2">
+                            <span class="text-xs text-gray-500"><i class="fa-solid fa-forward-step text-orange-400"></i> 表示曾使用強制通關</span>
+                        </div>
                         <table class="w-full text-left border-collapse min-w-[700px]">
                             <thead>
                                 <tr class="bg-teal-50 border-b border-teal-200">
@@ -761,13 +756,13 @@
                     <div class="mt-8 pt-6 border-t border-gray-100 text-center space-y-2">
                         <p class="text-gray-600 font-bold">Great Job! Keep learning.</p>
                         <p class="text-lg text-blue-600 font-bold mt-2">接下來請完成Google Classroom 的作業。</p>
-                        <p class="text-xs text-gray-400">請將此頁面列印或存為 PDF，並上傳至 Google Classroom。</p>
+                        <p class="text-xs text-gray-400">請將此頁面存為 PDF，並上傳至 Google Classroom。</p>
                     </div>
                 </div>
 
                 <div class="mt-8 flex justify-center gap-4 no-print pb-8">
-                    <button onclick="window.print()" class="px-8 py-3 bg-teal-600 text-white rounded-full hover:bg-teal-700 font-bold transition shadow-lg flex items-center gap-2">
-                        <i class="fa-solid fa-print"></i> 列印 / 存成 PDF
+                    <button id="pdf-download-btn" onclick="downloadPDF()" class="px-8 py-3 bg-teal-600 text-white rounded-full hover:bg-teal-700 font-bold transition shadow-lg flex items-center gap-2">
+                        <i class="fa-solid fa-download"></i> 直接下載 PDF
                     </button>
                 </div>
             </section>
@@ -1046,6 +1041,7 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
         let t6CurrentIndex = 0;
         let t5SpeechLevel = 1; 
         let t5Processing = false;
+        let t5FailCount = 0; // 新增：紀錄口說失敗次數
         
         // Speech Recognition Setup
         let recognition;
@@ -1107,11 +1103,6 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
             const today = new Date();
             document.getElementById('report-date').innerText = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
             
-            // Check if running in an iframe (e.g., Google Sites)
-            if (window.self !== window.top) {
-                document.getElementById('iframe-warning').classList.remove('hidden');
-            }
-            
             // Initialize Speech Recognition
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1125,17 +1116,19 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
                     checkSpeechResult(result);
                 };
                 recognition.onerror = function(event) {
-                    console.error("Speech recognition error", event.error);
                     stopListeningUI();
                     
                     // Add handling for 'aborted' error
                     if (event.error === 'aborted') {
                         console.log("Speech recognition was manually stopped.");
+                    } else if (event.error === 'no-speech') {
+                        console.log("Speech recognition timeout: No speech detected.");
+                        document.getElementById('t5-sub-text').innerText = "未偵測到聲音，請再按一次麥克風。";
                     } else if(event.error === 'not-allowed') {
-                        let msg = "⚠️ 無法存取麥克風！\n\n1. 請確認您已允許瀏覽器的麥克風權限。\n2. 若您是在 Google Site (協作平台) 內瀏覽，系統會阻擋麥克風，請點擊上方的「在新分頁完整開啟」按鈕來使用。";
-                        alert(msg);
-                        document.getElementById('t5-sub-text').innerText = "麥克風權限被阻擋 🚫";
+                         console.error("Speech recognition error", event.error);
+                        document.getElementById('t5-sub-text').innerText = "請允許麥克風存取權限。";
                     } else {
+                         console.error("Speech recognition error", event.error);
                         document.getElementById('t5-sub-text').innerText = "辨識失敗，請再試一次！";
                     }
                 };
@@ -1363,7 +1356,8 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
                 passedLevel2: item.passedLevel2,
                 passedLevel3: item.passedLevel3,
                 passedLevel4: item.passedLevel4,
-                spellingCompleted: item.spellingCompleted
+                spellingCompleted: item.spellingCompleted,
+                t5Forced: item.t5Forced
             }));
             safeSetItem(getStorageKey(), JSON.stringify(dataToSave));
             console.log("Progress saved for " + currentStudentId);
@@ -1385,14 +1379,21 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
                         item.passedLevel3 = savedItem.passedLevel3 || false;
                         item.passedLevel4 = savedItem.passedLevel4 || false;
                         item.spellingCompleted = savedItem.spellingCompleted || false;
+                        item.t5Forced = savedItem.t5Forced || false;
                     }
                 });
                 console.log("Progress loaded for " + currentStudentId);
                 
+                // 重置指標確保從頭開始掃描未完成項目 (Reset indices to scan for uncompleted)
+                t1CurrentIndex = 0;
+                t5CurrentIndex = 0;
+                t6CurrentIndex = 0;
+
                 // Re-render UI to reflect loaded state
                 updateT1Display(); 
                 renderTask3();
                 renderRescueStation();
+                updateT6Display();
             }
         }
 
@@ -1472,14 +1473,37 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
                         passedLevel4: false,
                         spellingCompleted: false,
                         t1Completed: false,
+                        t5Forced: false,
                         category: currentSection // Store category
                     });
                 }
             });
             
+            // 將單字陣列亂數打亂 (Shuffle array for random order)
+            for (let i = vocabList.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [vocabList[i], vocabList[j]] = [vocabList[j], vocabList[i]];
+            }
+            
             initTask1();
             initTask6(); 
             renderAllTasks();
+        }
+
+        function handleNameEnter(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const name = e.target.value.trim();
+                if (name) {
+                    currentStudentId = name;
+                    document.getElementById('header-student-name').innerText = `已登入 (${name})`;
+                    document.getElementById('report-student-name').innerText = name;
+                    loadProgress();
+                    e.target.blur(); // 取消輸入框焦點，表示輸入完成
+                } else {
+                    alert("請輸入姓名才能登入喔！\nPlease enter your name.");
+                }
+            }
         }
 
         function startMission() {
@@ -1487,17 +1511,19 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
             const nameInput = document.getElementById('studentNameInput');
             const name = nameInput.value.trim();
             
-            if (!name) {
-                alert("請輸入姓名或座號才能開始紀錄喔！\nPlease enter your name to start.");
+            if (!name && !currentStudentId) {
+                alert("請先輸入姓名才能開始任務喔！\nPlease enter your name to start.");
                 nameInput.focus();
                 return;
             }
 
-            currentStudentId = name;
-            document.getElementById('header-student-name').innerText = name;
-            document.getElementById('report-student-name').innerText = name;
+            if (name && name !== currentStudentId) {
+                currentStudentId = name;
+                document.getElementById('header-student-name').innerText = `已登入 (${name})`;
+                document.getElementById('report-student-name').innerText = name;
+                loadProgress(); // Load saved data if exists
+            }
             
-            loadProgress(); // Load saved data if exists
             switchTab('task1');
         }
 
@@ -1536,9 +1562,15 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
         }
 
         function updateT1Display() {
+            // 自動跳過已完成的單字 (Skip completed items)
+            while(t1CurrentIndex < vocabList.length && vocabList[t1CurrentIndex].t1Completed) {
+                t1CurrentIndex++;
+            }
+
             const content = document.getElementById('t1-content');
             const completion = document.getElementById('t1-completion');
             const total = vocabList.length;
+            const completedCount = vocabList.filter(i => i.t1Completed).length;
 
             if (total === 0) {
                  content.classList.add('hidden');
@@ -1546,7 +1578,7 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
                  return; 
             }
             
-            if (t1CurrentIndex >= total) {
+            if (t1CurrentIndex >= total || completedCount >= total) {
                 content.classList.add('hidden');
                 completion.classList.remove('hidden');
                 document.getElementById('t1-progress').style.width = '100%';
@@ -1559,9 +1591,9 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
             const item = vocabList[t1CurrentIndex];
             document.getElementById('t1-word').innerText = item.word;
             document.getElementById('t1-meaning').innerText = item.meaning;
-            document.getElementById('t1-current-num').innerText = t1CurrentIndex + 1;
+            document.getElementById('t1-current-num').innerText = Math.min(completedCount + 1, total);
             document.getElementById('t1-total-num').innerText = total;
-            document.getElementById('t1-progress').style.width = `${(t1CurrentIndex / total) * 100}%`;
+            document.getElementById('t1-progress').style.width = `${(completedCount / total) * 100}%`;
             
             document.getElementById('t1-feedback-msg').style.opacity = '0';
         }
@@ -1787,30 +1819,252 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
             spokenTextDiv.innerText = `You said: "${transcript}"`;
             spokenTextDiv.classList.remove('hidden');
 
-            // Flexible match: exact match or user speech includes the word (or vice versa for close matches)
+            let isMatch = false;
+            const userWords = userSaid.split(/\s+/);
+
+            // 1. 完全比對 或 包含比對 (Flexible match)
             if (userSaid === correctWord || userSaid.includes(correctWord) || correctWord.includes(userSaid)) {
+                isMatch = true;
+            } else {
+                // 新增：針對特定易辨識錯誤、同音字、短單字的容錯清單 (Hardcoded fallbacks for U1-U6)
+                const trickyWords = {
+                    // U1
+                    "than": ["then", "dan", "van"],
+                    "pork": ["park", "poke", "port", "part"],
+                    "beef": ["beeps", "be", "leaf", "beat"],
+                    "feel": ["few", "fill", "fell", "field", "fear"],
+                    "steak": ["stick", "state", "skate", "snake", "stay"],
+                    "ham": ["him", "hand", "hem"],
+                    "butter": ["batter", "better", "bother", "brother"],
+                    "meat": ["meet", "me", "need", "neat"],
+                    "smell": ["small", "smile", "smoke"],
+                    "taste": ["test", "paste", "text"],
+                    "dish": ["this", "these", "fish", "dash"],
+                    "top": ["talk", "pop", "cop", "stop"],
+                    "fries": ["price", "prize", "flies", "fried", "rice"],
+                    "knife": ["life", "nice", "night", "wife"],
+                    "fork": ["fault", "flock", "fog", "folk", "fuck", "fall"],
+                    "spoon": ["spawn", "spun", "soon", "moon"],
+                    "bun": ["burn", "fun", "one", "bomb", "bone", "done", "run"],
+                    "rock": ["walk", "lock", "rug", "log", "wrong"],
+                    "shape": ["sheep", "ship", "shake", "shave"],
+                    "fill": ["feel", "few", "pill", "fall"],
+                    "pack": ["peck", "park", "path", "pad", "pat", "pet"],
+                    
+                    // U2
+                    "grass": ["glass", "class", "cross"],
+                    "bite": ["by", "bike", "bye", "buy", "right", "white", "fight"],
+                    "death": ["debt", "deaf", "dead", "desk", "depth"],
+                    "kick": ["cake", "keep", "kid", "kit"],
+                    "kill": ["pill", "chill", "hill", "cow"],
+                    "snake": ["snack", "sneak", "make"],
+                    "wet": ["wait", "weight", "went", "white"],
+                    "deep": ["dip", "did", "keep"],
+                    "true": ["two", "too", "to", "chew", "shoe"],
+                    "bee": ["be", "b", "beat", "me", "fee"],
+                    "inch": ["each", "itch", "age", "edge"],
+                    "wide": ["white", "why", "wife", "wire", "right"],
+                    "mile": ["mild", "mind", "my", "smile"],
+                    "feet": ["fit", "feed", "beat", "seat"],
+                    "air": ["err", "are", "heir", "hair", "ear", "there", "their", "where", "a", "l", "yeah", "year"],
+                    "far": ["for", "four", "fall", "fire", "five"],
+                    "light": ["like", "lie", "night", "right", "life"],
+                    "cross": ["across", "cause", "course", "close"],
+
+                    // U3
+                    "hard": ["heart", "hot", "hat", "hurt", "half"],
+                    "well": ["will", "while", "whale", "wow"],
+                    "share": ["sure", "shell", "show", "chair"],
+                    "weak": ["week", "wake", "wait", "weed"],
+                    "hen": ["hand", "him", "ham", "pen", "ten", "can"],
+                    "bow": ["boat", "bowl", "vow", "bout", "bound", "ball"],
+                    "wise": ["wife", "white", "why", "wine", "ways"],
+                    "cheer": ["chair", "chill", "tear", "clear"],
+                    "mean": ["men", "me", "name", "main", "need"],
+                    "make": ["mate", "may", "made", "wake"],
+                    "break": ["brake", "brick", "brave", "bread"],
+                    "treat": ["tree", "trick", "trip", "street", "three"],
+                    "have": ["half", "hat", "help"],
+                    "grape": ["great", "grade", "grip", "gray"],
+                    "goose": ["good", "ghost", "goes", "goods"],
+                    "duck": ["dark", "dog", "doc", "dot"],
+                    "goat": ["gold", "go", "ghost", "good", "girl"],
+                    "sheep": ["ship", "shape", "sheet", "she", "see"],
+                    "peach": ["pitch", "piece", "peace", "page"],
+                    "pear": ["pair", "bear", "bare", "hair"],
+                    "pound": ["pond", "point", "pounce", "town"],
+                    "pick": ["pig", "peak", "peek", "pit", "pink"],
+                    "bean": ["been", "bin", "being", "mean", "ping"],
+                    "cent": ["sent", "scent", "send", "saint", "sand", "sense", "saying"],
+                    "choose": ["shoes", "juice", "chews", "truths", "tools"],
+
+                    // U4
+                    "blow": ["below", "bro", "bowl", "blue"],
+                    "rose": ["roads", "rolls", "rules", "roast", "rows"],
+                    "must": ["mass", "mask", "mouse", "much", "math", "month"],
+                    "should": ["shoot", "shoe", "showed", "short"],
+                    "or": ["all", "oh", "awe", "are", "our"],
+                    "face": ["faith", "phase", "space", "base"],
+                    "star": ["start", "style", "stuff", "store"],
+                    "shine": ["sign", "time", "shy", "fine"],
+                    "wave": ["wife", "weigh", "way", "wait", "wake"],
+                    "frog": ["blog", "vlog", "flock", "fog", "fuck"],
+                    "pond": ["pound", "point", "pawn", "upon"],
+                    "sharp": ["shop", "shot", "shark", "short"],
+                    "reach": ["rich", "ridge", "witch", "read"],
+                    "space": ["spice", "face", "base", "speech"],
+                    "size": ["sighs", "sides", "signs", "science"],
+                    "as": ["is", "has", "us", "ass", "ice"],
+                    "times": ["time", "types", "tires", "towns"],
+
+                    // U5
+                    "cough": ["call", "caught", "cup", "car", "calf", "cost"],
+                    "noon": ["moon", "known", "none", "room"],
+                    "both": ["boat", "boss", "boy", "bowl", "bolt", "board"],
+                    "stand": ["sand", "stem", "stain", "stamp"],
+                    "cold": ["coal", "coat", "code", "call", "cool"],
+                    "head": ["had", "hat", "hit", "hair", "have"],
+                    "knee": ["need", "me", "neat", "name"],
+                    "nail": ["mail", "male", "now", "know"],
+                    "neck": ["next", "net", "let", "make"],
+                    "root": ["route", "room", "rude", "rule", "road"],
+                    "sweet": ["suite", "sweat", "weed", "swim"],
+                    
+                    // U6
+                    "pass": ["path", "past", "pats", "pets", "pace"],
+                    "throw": ["through", "though", "slow", "flow"],
+                    "point": ["pound", "pond", "points", "pint", "paint", "print", "plant", "port", "part", "appoint", "boy", "coin", "poem", "pulling", "poling", "play", "pointy"],
+                    "win": ["when", "wing", "one", "wind", "went", "we"],
+                    "fail": ["fell", "feel", "sale", "fill", "fair", "fall"],
+                    "test": ["taste", "text", "tents", "chest", "tenth"],
+                    "few": ["feel", "fuel", "fill", "foo", "view", "phew", "flew", "flu", "flue", "shoe", "hue", "hugh", "if you", "a few", "food"],
+                    "grade": ["great", "grey", "gray", "grave"],
+                    "angle": ["angel", "ankle", "uncle", "angry"],
+                    "laugh": ["love", "life", "left", "rough", "loud"],
+                    "push": ["put", "bush", "pull", "puss"],
+                    "lead to": ["little", "leave to", "lead two", "need to"],
+                    "our": ["are", "hour", "out", "owl", "all"],
+                    "sea": ["see", "c", "she", "say"]
+                };
+
+                // 若單字在白名單中，且語音辨識出相似的字，直接算對
+                if (trickyWords[correctWord]) {
+                    for (let w of trickyWords[correctWord]) {
+                        if (userWords.includes(w) || userSaid === w) {
+                            isMatch = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isMatch) {
+                    // 2. 模糊比對 (Levenshtein Distance 萊文斯坦距離)
+                    const distance = levenshteinDistance(userSaid, correctWord);
+                    const maxLength = Math.max(userSaid.length, correctWord.length);
+                    const similarity = maxLength === 0 ? 0 : (maxLength - distance) / maxLength;
+                    
+                    // 稍微降低門檻至 0.65，讓 3 個字母的單字也能容許 1 個字母的誤差 (例如: air -> aim)
+                    if (similarity >= 0.65) { 
+                        isMatch = true;
+                    } else {
+                        // 3. 檢查單字中是否包含發音相近的字 (拆字比對)
+                        if (correctWord.split(/\s+/).length === 1) {
+                            for (let w of userWords) {
+                                let d = levenshteinDistance(w, correctWord);
+                                if (d <= 1 && correctWord.length >= 3) isMatch = true; // 允許 1 個字母的誤差
+                                if (d <= 2 && correctWord.length >= 5) isMatch = true; // 長單字允許 2 個字母誤差
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (isMatch) {
                 const micBtn = document.getElementById('t5-mic-btn');
                 micBtn.classList.add('bg-green-500', 'text-white');
                 micBtn.classList.remove('bg-red-500', 'bg-gray-100', 'listening-ring');
+                document.getElementById('t5-skip-btn').classList.add('hidden');
                 handlePingPongSuccess();
             } else {
+                t5FailCount++;
                 const card = document.getElementById('t5-card');
                 card.classList.add('animate-shake', 'border-red-400');
                 setTimeout(() => card.classList.remove('animate-shake', 'border-red-400'), 500);
                 document.getElementById('t5-sub-text').innerText = "Try again! 聽起來不太像喔，請再試一次。";
+                
+                // 如果失敗 3 次以上，顯示強制通關按鈕
+                if (t5FailCount >= 3) {
+                    document.getElementById('t5-skip-btn').classList.remove('hidden');
+                }
             }
         }
 
+        // 新增：計算兩個字串的編輯距離
+        function levenshteinDistance(a, b) {
+            if(a.length === 0) return b.length; 
+            if(b.length === 0) return a.length; 
+            var matrix = [];
+            for(var i = 0; i <= b.length; i++){ matrix[i] = [i]; }
+            for(var j = 0; j <= a.length; j++){ matrix[0][j] = j; }
+            for(var i = 1; i <= b.length; i++){
+                for(var j = 1; j <= a.length; j++){
+                    if(b.charAt(i-1) === a.charAt(j-1)){
+                        matrix[i][j] = matrix[i-1][j-1];
+                    } else {
+                        matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, Math.min(matrix[i][j-1] + 1, matrix[i-1][j] + 1));
+                    }
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+
+        // 新增：強制通關功能
+        function forcePassPingPong() {
+            if (t5Processing) return;
+            const micBtn = document.getElementById('t5-mic-btn');
+            micBtn.classList.add('bg-green-500', 'text-white');
+            micBtn.classList.remove('bg-red-500', 'bg-gray-100', 'listening-ring');
+            document.getElementById('t5-skip-btn').classList.add('hidden');
+            
+            // 標記該單字曾使用過強制通關
+            vocabList[t5CurrentIndex].t5Forced = true;
+            
+            handlePingPongSuccess();
+        }
+
         function updateT5Card() {
+            // 自動跳過該關卡已完成的單字 (Skip completed items for the current level)
+            while (t5CurrentIndex < vocabList.length) {
+                const item = vocabList[t5CurrentIndex];
+                let isCompleted = false;
+                if(t5SpeechLevel === 1) isCompleted = item.passedLevel1;
+                if(t5SpeechLevel === 2) isCompleted = item.passedLevel2;
+                if(t5SpeechLevel === 3) isCompleted = item.passedLevel3;
+                if(t5SpeechLevel === 4) isCompleted = item.passedLevel4;
+                
+                if (isCompleted) t5CurrentIndex++;
+                else break;
+            }
+
             const card = document.getElementById('t5-card');
             const total = vocabList.length;
             t5Processing = false;
+            t5FailCount = 0; // 重置失敗次數
+            document.getElementById('t5-skip-btn').classList.add('hidden'); // 隱藏強制通關按鈕
             stopListeningUI(); // Reset mic state
 
             if (total === 0) return;
 
+            let completedCount = 0;
+            vocabList.forEach(i => {
+                if(t5SpeechLevel === 1 && i.passedLevel1) completedCount++;
+                if(t5SpeechLevel === 2 && i.passedLevel2) completedCount++;
+                if(t5SpeechLevel === 3 && i.passedLevel3) completedCount++;
+                if(t5SpeechLevel === 4 && i.passedLevel4) completedCount++;
+            });
+
             // Check if level completed
-            if(t5CurrentIndex >= total) {
+            if(t5CurrentIndex >= total || completedCount >= total) {
                 document.getElementById('t5-game-area').classList.add('hidden');
                 if(t5SpeechLevel < 4) {
                     const titles = ["", "Level 1 完成！", "Level 2 完成！", "Level 3 完成！"];
@@ -1899,9 +2153,9 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
                 mainText.style.cursor = 'default';
             }
             
-            document.getElementById('t5-current-num').innerText = t5CurrentIndex + 1;
+            document.getElementById('t5-current-num').innerText = Math.min(completedCount + 1, total);
             document.getElementById('t5-total-num').innerText = total;
-            document.getElementById('t5-progress').style.width = `${(t5CurrentIndex / total) * 100}%`;
+            document.getElementById('t5-progress').style.width = `${(completedCount / total) * 100}%`;
         }
 
         function generateOptions(correctItem, type) {
@@ -1986,13 +2240,19 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
         }
 
         function updateT6Display() {
+            // 自動跳過已完成的單字 (Skip completed items)
+            while(t6CurrentIndex < vocabList.length && vocabList[t6CurrentIndex].spellingCompleted) {
+                t6CurrentIndex++;
+            }
+
             const content = document.getElementById('t6-content');
             const completion = document.getElementById('t6-completion');
             const total = vocabList.length;
+            const completedCount = vocabList.filter(i => i.spellingCompleted).length;
 
             if (total === 0) return;
 
-            if (t6CurrentIndex >= total) {
+            if (t6CurrentIndex >= total || completedCount >= total) {
                 content.classList.add('hidden');
                 completion.classList.remove('hidden');
                 document.getElementById('t6-progress').style.width = '100%';
@@ -2003,9 +2263,9 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
             completion.classList.add('hidden');
 
             const item = vocabList[t6CurrentIndex];
-            document.getElementById('t6-current-num').innerText = t6CurrentIndex + 1;
+            document.getElementById('t6-current-num').innerText = Math.min(completedCount + 1, total);
             document.getElementById('t6-total-num').innerText = total;
-            document.getElementById('t6-progress').style.width = `${(t6CurrentIndex / total) * 100}%`;
+            document.getElementById('t6-progress').style.width = `${(completedCount / total) * 100}%`;
             
             const input = document.getElementById('t6-input');
             input.value = '';
@@ -2056,6 +2316,12 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
             document.getElementById('report-student-name').innerText = currentStudentId || "Student";
             
             const total = vocabList.length;
+            
+            // Calc T1 Progress
+            const t1Count = vocabList.filter(i => i.t1Completed).length;
+            const t1Progress = total === 0 ? 0 : Math.round((t1Count / total) * 100);
+
+            // Calc Mastery (Green Lights)
             const greenCount = vocabList.filter(i => i.status === 'green').length;
             const mastery = total === 0 ? 0 : Math.round((greenCount / total) * 100);
             
@@ -2075,6 +2341,7 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
             const spellingProgress = total === 0 ? 0 : Math.round((spellingCount / total) * 100);
 
             document.getElementById('report-total').innerText = total;
+            document.getElementById('report-t1-syllable').innerText = t1Progress + "%";
             document.getElementById('report-mastery').innerText = mastery + "%";
             document.getElementById('report-speech').innerText = speechProgress + "%";
             document.getElementById('report-spelling').innerText = spellingProgress + "%";
@@ -2091,7 +2358,9 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
                         <span class="text-xs text-gray-500 font-normal">${item.meaning}</span>
                     </td>
                     <td class="p-3 text-center">
-                         <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">${item.syllableCount}</span>
+                         <span class="${item.t1Completed ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-700'} px-2 py-1 rounded text-xs font-bold">
+                             ${item.syllableCount} ${item.t1Completed ? '<i class="fa-solid fa-check ml-1"></i>' : ''}
+                         </span>
                     </td>
                     <td class="p-3 text-center">
                         <span class="px-2 py-1 rounded-full text-xs font-bold ${isGreen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
@@ -2099,11 +2368,12 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
                         </span>
                     </td>
                     <td class="p-3 text-center">
-                        <div class="flex justify-center gap-1">
+                        <div class="flex justify-center items-center gap-1">
                             <span class="${item.passedLevel1 ? 'bg-yellow-400 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 1">1</span>
                             <span class="${item.passedLevel2 ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 2">2</span>
                             <span class="${item.passedLevel3 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 3">3</span>
                             <span class="${item.passedLevel4 ? 'bg-red-400 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 4">4</span>
+                            ${item.t5Forced ? '<i class="fa-solid fa-forward-step text-orange-400 ml-1 text-sm" title="曾使用強制通關"></i>' : ''}
                         </div>
                     </td>
                     <td class="p-3 text-center">
@@ -2111,6 +2381,41 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
                     </td>
                 </tr>`;
                 tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        // 新增：直接將報表轉成 PDF 並下載的功能
+        function downloadPDF() {
+            const btn = document.getElementById('pdf-download-btn');
+            const originalText = btn.innerHTML;
+            
+            // 變更按鈕狀態為處理中
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在生成 PDF...';
+            btn.disabled = true;
+
+            // 指定要轉成 PDF 的區塊 (學習歷程報告書)
+            const element = document.getElementById('printable-report');
+            const fileName = `單字建築師_${currentUnit}_${currentStudentId || 'Student'}.pdf`;
+
+            // PDF 輸出設定
+            const opt = {
+                margin:       0.3,
+                filename:     fileName,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            // 執行下載
+            html2pdf().set(opt).from(element).save().then(() => {
+                // 恢復按鈕狀態
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }).catch(err => {
+                console.error(err);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert("PDF 生成失敗，請嘗試使用螢幕截圖繳交。");
             });
         }
 
