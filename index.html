@@ -3,357 +3,2458 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>單字記憶連結法 (Word Chunk Edition)</title>
-    
-    <!-- 1. 載入 Tailwind CSS -->
+    <title>單字建築師 - 互動任務 (U1-U6)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. 載入 Regenerator Runtime (解決 Babel async/await 報錯的核心關鍵) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.13.9/runtime.min.js"></script>
-
-    <!-- 3. 載入 React 和 ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- 4. 載入 Babel 用於解析 JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- 解決 Google Sites iframe 列印問題的樣式 -->
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- 新增 html2pdf 函式庫來直接下載 PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background-color: #fdf6e3;
+            color: #4a4e69;
+        }
+        .nav-item.active {
+            background-color: #ff8a65;
+            color: white;
+            font-weight: bold;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            ring: 2px;
+            border-color: #ff8a65;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #ddd; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #ccc; 
+        }
+        /* Firework Animation */
+        @keyframes firework-pop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.5); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .firework-icon {
+            animation: firework-pop 1s ease-out forwards;
+        }
+        /* Confetti Animation */
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            animation: confetti-fall 2s linear forwards;
+            z-index: 50;
+        }
+        /* Custom animations for speech feedback */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+        .listening-ring::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #ef4444;
+            border-radius: 50%;
+            z-index: -1;
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        /* Shake Animation for wrong answer */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .animate-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+        /* Print Styles */
         @media print {
             body * {
                 visibility: hidden;
             }
-            #root, #root * {
+            #printable-report, #printable-report * {
                 visibility: visible;
             }
-            #root {
+            #printable-report {
                 position: absolute;
                 left: 0;
                 top: 0;
                 width: 100%;
+                margin: 0;
+                padding: 20px;
+                background: white;
             }
             .no-print {
                 display: none !important;
             }
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div id="root"></div>
+<body class="h-screen flex flex-col overflow-hidden">
 
-    <script type="text/babel" data-presets="react">
-        // ==========================================
-        // 【設定區】如果您想將 Key 寫死在程式碼中，請填入下方
-        // ==========================================
-        const defaultApiKey = ""; 
-        // ==========================================
+    <!-- Header -->
+    <header class="bg-white shadow-md z-20 p-4 flex justify-between items-center relative">
+        <div class="flex items-center gap-3">
+            <!-- Mobile Menu Button -->
+            <button onclick="toggleSidebar()" class="md:hidden text-gray-600 hover:text-orange-500 transition focus:outline-none">
+                <i class="fa-solid fa-bars text-2xl"></i>
+            </button>
 
-        const { useState, useEffect, useRef } = React;
+            <div class="w-10 h-10 bg-orange-400 rounded-full flex items-center justify-center text-white text-xl hidden sm:flex">
+                <i class="fa-solid fa-shapes"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-800">Vocabulary Architect</h1>
+                <p class="text-xs text-gray-500 hidden sm:block">單字建築師互動檔</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-4">
+             <div class="text-sm font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-full whitespace-nowrap hidden md:block">
+                <i class="fa-solid fa-user"></i> 學生: <span id="header-student-name" class="text-blue-600">未登入</span>
+            </div>
+             <div class="text-sm font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-full whitespace-nowrap">
+                <i class="fa-solid fa-folder-open"></i> <span class="hidden sm:inline">目前單元:</span> <span id="header-unit-display">Unit 6</span>
+            </div>
+            <div class="text-sm font-bold text-orange-500 bg-orange-50 px-3 py-1 rounded-full whitespace-nowrap">
+                <i class="fa-solid fa-user-graduate"></i> <span class="hidden sm:inline">Student Mode</span>
+            </div>
+        </div>
+    </header>
 
-        // --- 安全的 localStorage 讀取 ---
-        const safeGetStorage = (key, defaultValue) => {
-            try {
-                const item = localStorage.getItem(key);
-                return item ? JSON.parse(item) : defaultValue;
-            } catch (e) { return defaultValue; }
-        };
+    <div class="flex flex-1 overflow-hidden relative">
+        <!-- Sidebar Navigation -->
+        <nav id="sidebar" class="absolute md:relative z-10 w-64 bg-white border-r border-gray-100 flex-col overflow-y-auto no-scrollbar transform -translate-x-full md:translate-x-0 transition-transform duration-300 h-full">
+            <div class="p-4 space-y-2">
+                <button onclick="switchTab('setup')" class="nav-item w-full text-left p-3 rounded-xl hover:bg-orange-50 transition-colors flex items-center gap-3 active" id="nav-setup">
+                    <i class="fa-solid fa-pen-to-square w-6 text-center"></i>
+                    <div>
+                        <div class="font-bold">0. 地基工程</div>
+                        <div class="text-xs opacity-70">設定單元</div>
+                    </div>
+                </button>
+                
+                <div class="h-px bg-gray-200 my-2"></div>
 
-        const safeSetStorage = (key, value) => {
-            try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
-        };
+                <button onclick="switchTab('task1')" class="nav-item w-full text-left p-3 rounded-xl hover:bg-orange-50 transition-colors flex items-center gap-3" id="nav-task1">
+                    <i class="fa-solid fa-building w-6 text-center text-blue-500"></i>
+                    <div>
+                        <div class="font-bold">T1. 單字建築師</div>
+                        <div class="text-xs opacity-70">Syllable Builder</div>
+                    </div>
+                </button>
 
-        // --- Icons ---
-        const Icon = ({ path, className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>
-        );
+                <button onclick="switchTab('task2')" class="nav-item w-full text-left p-3 rounded-xl hover:bg-orange-50 transition-colors flex items-center gap-3" id="nav-task2">
+                    <i class="fa-solid fa-volume-high w-6 text-center text-purple-500"></i>
+                    <div>
+                        <div class="font-bold">T2. KK音標助念員</div>
+                        <div class="text-xs opacity-70">Sound Marker</div>
+                    </div>
+                </button>
 
-        const icons = {
-            BookOpen: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>,
-            CheckCircle: <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>,
-            Printer: <><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2-2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>,
-            Trash2: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>,
-            Video: <><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></>,
-            Mic: <><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></>,
-            MicOff: <><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></>,
-            RefreshCw: <><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>,
-            AlertCircle: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
-            Wand2: <><path d="m19 2 2 2-2 2-2-2 2-2Z"/><path d="m5 6 2 2-2 2-2-2 2-2Z"/><path d="m11 2 2 2-2 2-2-2 2-2Z"/><path d="m11 6 2 2-2 2-2-2 2-2Z"/><path d="m12.5 12.5-4 4a2.828 2.828 0 1 0 4 4l4-4-2-2Z"/><path d="m15 11-1 1"/></>,
-            AlertTriangle: <><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
-            Lightbulb: <><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 16.5 8 4.5 4.5 0 0 0 12 3.5 4.5 4.5 0 0 0 7.5 8c0 1.42.74 2.68 1.91 3.5.76.76 1.23 1.52 1.41 2.5"/></>,
-            Loader2: <><path d="M21 12a9 9 0 1 1-6.219-8.56"/></>,
-            FileText: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>,
-            ArrowLeft: <><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></>,
-            Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
-            ListChecks: <><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></>,
-            Key: <><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></>,
-            ExternalLink: <><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></>,
-            Save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>,
-            Upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>
-        };
+                <button onclick="switchTab('task3')" class="nav-item w-full text-left p-3 rounded-xl hover:bg-orange-50 transition-colors flex items-center gap-3" id="nav-task3">
+                    <i class="fa-solid fa-traffic-light w-6 text-center text-green-500"></i>
+                    <div>
+                        <div class="font-bold">T3. 單字紅綠燈</div>
+                        <div class="text-xs opacity-70">Traffic Light Check</div>
+                    </div>
+                </button>
 
-        const VocabularyLinker = () => {
-            const initialWordState = {
-                targetWord: '', associations: ['', '', '', '', ''], associationStatus: [null, null, null, null, null],
-                sentence: '', checked: false, checkerName: '', speechStatus: 'idle', isAnalyzing: false
-            };
+                <button onclick="switchTab('task4')" class="nav-item w-full text-left p-3 rounded-xl hover:bg-orange-50 transition-colors flex items-center gap-3" id="nav-task4">
+                    <i class="fa-solid fa-life-ring w-6 text-center text-red-500"></i>
+                    <div>
+                        <div class="font-bold">T4. 單字救援站</div>
+                        <div class="text-xs opacity-70">Rescue Station</div>
+                    </div>
+                </button>
 
-            const [apiKey, setApiKey] = useState(() => {
-                try { return localStorage.getItem('gemini_api_key') || defaultApiKey; } catch(e) { return defaultApiKey; }
-            });
-            const [showKeyInput, setShowKeyInput] = useState(false);
-            const [studentInfo, setStudentInfo] = useState({ className: '', seatNo: '', name: '', unit: 'U1' });
-            const [words, setWords] = useState(Array(15).fill(null).map(() => ({ ...initialWordState })));
-            const [showVideo, setShowVideo] = useState(true);
-            const [viewMode, setViewMode] = useState('edit');
-            const [listeningIndex, setListeningIndex] = useState(null); 
-            const recognitionRef = useRef(null);
+                <button onclick="switchTab('task5')" class="nav-item w-full text-left p-3 rounded-xl hover:bg-orange-50 transition-colors flex items-center gap-3" id="nav-task5">
+                    <i class="fa-solid fa-headphones-simple w-6 text-center text-yellow-500"></i>
+                    <div>
+                        <div class="font-bold">T5. 單字乒乓賽</div>
+                        <div class="text-xs opacity-70">Word Ping Pong</div>
+                    </div>
+                </button>
+
+                <button onclick="switchTab('task6')" class="nav-item w-full text-left p-3 rounded-xl hover:bg-orange-50 transition-colors flex items-center gap-3" id="nav-task6">
+                    <i class="fa-solid fa-pen-nib w-6 text-center text-indigo-500"></i>
+                    <div>
+                        <div class="font-bold">T6. 聽音拼字王</div>
+                        <div class="text-xs opacity-70">Spelling Bee</div>
+                    </div>
+                </button>
+
+                 <button onclick="switchTab('task7')" class="nav-item w-full text-left p-3 rounded-xl hover:bg-orange-50 transition-colors flex items-center gap-3" id="nav-task7">
+                    <i class="fa-solid fa-file-export w-6 text-center text-teal-500"></i>
+                    <div>
+                        <div class="font-bold">T7. 學習歷程輸出</div>
+                        <div class="text-xs opacity-70">Export for GC</div>
+                    </div>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Overlay for mobile sidebar -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black bg-opacity-50 z-0 hidden md:hidden"></div>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto bg-orange-50/50 p-4 md:p-8 relative w-full">
             
-            // 檔案匯入的 ref
-            const fileInputRef = useRef(null);
+            <!-- SETUP SECTION -->
+            <section id="setup" class="tab-content max-w-4xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-sm p-8 border border-orange-100 text-center relative">
+                    <!-- Teacher Toggle Button -->
+                    <button onclick="toggleTeacherMode()" class="absolute top-4 right-4 text-xs bg-gray-100 text-gray-400 hover:text-orange-500 hover:bg-orange-50 px-3 py-1 rounded-full transition flex items-center gap-1">
+                        <i class="fa-solid fa-wrench"></i> 編輯單字 (Teacher)
+                    </button>
 
-            useEffect(() => {
-                const savedData = safeGetStorage('vocabLinkerData', null);
-                if (savedData) {
-                    setStudentInfo(prev => ({ ...prev, ...(savedData.studentInfo || {}), unit: savedData.studentInfo?.unit || 'U1' }));
-                    const loadedWords = (savedData.words || []).map(w => ({
-                        ...initialWordState, ...w,
-                        associationStatus: w.associationStatus || [null, null, null, null, null],
-                        speechStatus: w.checked ? 'success' : 'idle', isAnalyzing: false
-                    }));
-                    while(loadedWords.length < 15) loadedWords.push({ ...initialWordState });
-                    setWords(loadedWords);
-                }
-            }, []);
+                    <div class="mb-8 mt-4">
+                        <div class="w-24 h-24 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-5xl mx-auto mb-4">
+                            <i class="fa-solid fa-school"></i>
+                        </div>
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">歡迎來到單字建築師</h2>
+                        <p class="text-gray-500">Welcome to Vocabulary Architect</p>
+                    </div>
 
-            useEffect(() => { safeSetStorage('vocabLinkerData', { studentInfo, words }); }, [studentInfo, words]);
+                    <!-- Teacher Edit Zone (Hidden by default) -->
+                    <div id="teacher-edit-zone" class="hidden mb-8 bg-orange-50 p-6 rounded-xl border-2 border-orange-200 text-left animate-fade-in">
+                        <h3 class="font-bold text-orange-700 mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square"></i> 資料編輯區 (Data Editor)
+                        </h3>
+                        <p class="text-xs text-orange-600 mb-4">
+                            請將單字資料貼入下方。格式：英文 | 音節切分 | 音標 | 中文<br>
+                            可使用 <strong># Reading</strong> 來標記閱讀單字的開始位置。<br>
+                            (若要在 Google Site 永久生效，請複製下方文字並取代程式碼中的 `unitData` 內容)
+                        </p>
+                        
+                        <!-- PDF Import Section -->
+                        <div class="mb-4 p-4 bg-white rounded-lg border border-orange-200">
+                            <label class="block text-sm font-bold text-orange-700 mb-2">
+                                <i class="fa-solid fa-file-pdf"></i> 匯入單字 PDF 檔 (自動分類單元)
+                            </label>
+                            <p class="text-xs text-gray-500 mb-3">
+                                為確保自動分類成功，PDF 內文需包含 <strong>Unit 1</strong> 等單元標題。系統會自動嘗試將內容轉換為系統格式。
+                            </p>
+                            <input type="file" id="pdfUpload" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 transition cursor-pointer">
+                            <div id="pdf-loading" class="hidden text-sm text-orange-500 font-bold mt-2">
+                                <i class="fa-solid fa-spinner fa-spin"></i> 正在解析 PDF，請稍候...
+                            </div>
+                        </div>
 
-            const handleApiKeyChange = (e) => {
-                const newKey = e.target.value;
-                setApiKey(newKey);
-                try { localStorage.setItem('gemini_api_key', newKey); } catch(e){}
-            };
+                        <textarea id="teacherInput" class="w-full h-40 p-3 border border-orange-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-orange-400 mb-3"></textarea>
+                        <div class="flex justify-end gap-2">
+                            <button onclick="toggleTeacherMode()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">取消</button>
+                            <button onclick="saveTeacherData()" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-bold">儲存並更新</button>
+                        </div>
+                    </div>
 
-            const updateWord = (index, updates) => {
-                setWords(prev => {
-                    const newWords = [...prev];
-                    newWords[index] = { ...newWords[index], ...updates };
-                    return newWords;
-                });
-            };
+                    <!-- Student Login -->
+                    <div class="max-w-md mx-auto mb-6 text-left">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            <i class="fa-solid fa-user text-blue-500"></i> 學生姓名 (Student Name):
+                        </label>
+                        <div class="flex gap-2">
+                            <input type="text" id="studentNameInput" onkeypress="handleNameEnter(event)" placeholder="請輸入名字 (e.g., Alex)" class="w-full p-4 border-2 border-blue-200 rounded-xl text-xl font-bold text-gray-700 focus:border-blue-500 focus:ring-blue-200 transition bg-blue-50">
+                            <button onclick="clearStudentData()" class="px-4 py-2 bg-gray-200 text-gray-500 rounded-xl hover:bg-gray-300 transition whitespace-nowrap" title="登出 / 清除欄位">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1 ml-1"><i class="fa-solid fa-circle-info"></i> 輸入後按 Enter 即可登入 (Press Enter to login)</p>
+                    </div>
 
-            // --- 新增：匯出功能 (下載 JSON) ---
-            const handleExportData = () => {
-                const dataStr = JSON.stringify({ studentInfo, words });
-                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                const exportFileDefaultName = `Vocab_${studentInfo.name || 'Student'}_${new Date().toISOString().slice(0,10)}.json`;
+                    <!-- Book Selector: added vocabulary-book choice -->
+                    <div class="max-w-md mx-auto mb-4 text-left">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            <i class="fa-solid fa-book text-blue-500"></i> 請選擇冊別 (Select Book):
+                        </label>
+                        <select id="bookSelector" onchange="changeBook()" class="w-full p-4 border-2 border-blue-200 rounded-xl text-xl font-bold text-gray-700 focus:border-blue-500 focus:ring-blue-200 transition bg-blue-50 cursor-pointer">
+                            <option value="B1" selected>B1（七上）</option>
+                            <option value="B3">B3（八上）</option>
+                            <option value="B5">B5（九上）</option>
+                        </select>
+                    </div>
 
-                const linkElement = document.createElement('a');
-                linkElement.setAttribute('href', dataUri);
-                linkElement.setAttribute('download', exportFileDefaultName);
-                linkElement.click();
-            };
+                    <!-- Unit Selector -->
+                    <div class="max-w-md mx-auto mb-4 text-left">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            <i class="fa-solid fa-book-open text-orange-500"></i> 請選擇單元 (Select Unit):
+                        </label>
+                        <select id="unitSelector" onchange="changeUnit()" class="w-full p-4 border-2 border-orange-200 rounded-xl text-xl font-bold text-gray-700 focus:border-orange-500 focus:ring-orange-200 transition bg-orange-50 cursor-pointer">
+                            <option value="U1">Unit 1</option>
+                            <option value="U2">Unit 2</option>
+                            <option value="U3">Unit 3</option>
+                            <option value="U4">Unit 4</option>
+                            <option value="U5">Unit 5</option>
+                            <option value="U6" selected>Unit 6</option>
+                        </select>
+                    </div>
 
-            // --- 新增：匯入功能 (讀取 JSON) ---
-            const handleImportClick = () => {
-                fileInputRef.current.click();
-            };
+                    <!-- Vocab Type Selector -->
+                    <div class="max-w-md mx-auto mb-8 text-left">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            <i class="fa-solid fa-filter text-indigo-500"></i> 單字範圍 (Filter Vocabulary):
+                        </label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="changeVocabType('all')" class="vocab-type-btn p-3 rounded-lg border-2 border-orange-200 font-bold text-gray-600 hover:bg-orange-50 focus:bg-orange-100 focus:border-orange-400 transition bg-orange-100 border-orange-400 text-orange-700" data-type="all">
+                                全部單字
+                            </button>
+                            <button onclick="changeVocabType('dialogue')" class="vocab-type-btn p-3 rounded-lg border-2 border-orange-200 font-bold text-gray-600 hover:bg-orange-50 focus:bg-orange-100 focus:border-orange-400 transition" data-type="dialogue">
+                                對話單字
+                            </button>
+                            <button onclick="changeVocabType('reading')" class="vocab-type-btn p-3 rounded-lg border-2 border-orange-200 font-bold text-gray-600 hover:bg-orange-50 focus:bg-orange-100 focus:border-orange-400 transition" data-type="reading">
+                                閱讀單字
+                            </button>
+                        </div>
+                    </div>
 
-            const handleFileChange = (event) => {
-                const fileObj = event.target.files && event.target.files[0];
-                if (!fileObj) return;
+                    <!-- Preview List (Read Only) -->
+                    <div class="max-w-2xl mx-auto mb-8 bg-gray-50 rounded-xl p-6 border border-gray-200 text-left h-64 overflow-y-auto custom-scrollbar">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase">本單元單字預覽 (Vocabulary Preview)</h3>
+                            <span class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full" id="preview-count">0 words</span>
+                        </div>
+                        <ul id="vocab-preview-list" class="space-y-2">
+                            <!-- Items injected via JS -->
+                        </ul>
+                    </div>
 
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const importedData = JSON.parse(e.target.result);
-                        if (importedData.studentInfo && importedData.words) {
-                             if(confirm('確定要載入此檔案嗎？目前的進度將被覆蓋。')) {
-                                setStudentInfo(importedData.studentInfo);
-                                const loadedWords = importedData.words.map(w => ({
-                                    ...initialWordState, ...w,
-                                    associationStatus: w.associationStatus || [null, null, null, null, null],
-                                    speechStatus: w.checked ? 'success' : 'idle', isAnalyzing: false
-                                }));
-                                setWords(loadedWords);
-                                alert('進度載入成功！');
-                             }
-                        } else {
-                            alert('檔案格式錯誤，找不到必要的資料。');
-                        }
-                    } catch (error) {
-                        alert('無法讀取檔案，請確認是否為正確的 .json 格式');
+                    <button onclick="startMission()" class="px-10 py-4 bg-orange-500 text-white rounded-full hover:bg-orange-600 font-bold shadow-xl text-xl transition transform hover:scale-105 flex items-center justify-center gap-3 mx-auto w-full md:w-auto">
+                        開始任務 (Start Mission) <i class="fa-solid fa-rocket"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- TASK 1 -->
+            <section id="task1" class="tab-content hidden max-w-4xl mx-auto">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2"><i class="fa-solid fa-building text-blue-500"></i> 單字建築師</h2>
+                    <p class="text-gray-600 text-sm md:text-base">聽發音，選出正確的音節數，蓋出單字大樓！</p>
+                </div>
+
+                <div id="t1-game-area" class="max-w-xl mx-auto relative">
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                        <div id="t1-progress" class="bg-blue-500 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+
+                    <!-- Question Card -->
+                    <div class="bg-white rounded-3xl shadow-xl p-4 md:p-8 border-b-8 border-blue-100 text-center relative overflow-hidden min-h-[400px] flex flex-col justify-center items-center">
+                        
+                        <!-- Firework Overlay -->
+                        <div id="t1-firework-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden bg-white/80 z-20">
+                            <i class="fa-solid fa-star text-9xl text-yellow-400 firework-icon"></i>
+                            <div class="absolute text-2xl font-bold text-orange-500 mt-32 animate-bounce">Great!</div>
+                        </div>
+
+                        <!-- Content -->
+                        <div id="t1-content" class="w-full">
+                            <div class="text-4xl md:text-6xl font-bold text-gray-800 mb-4 break-words" id="t1-word">Word</div>
+                            <div class="text-xl text-gray-500 mb-8" id="t1-meaning">Meaning</div>
+                            
+                            <button onclick="playCurrentWord()" class="w-16 h-16 md:w-20 md:h-20 bg-blue-100 text-blue-500 rounded-full text-2xl md:text-3xl hover:bg-blue-200 transition mb-8 shadow-sm">
+                                <i class="fa-solid fa-volume-high"></i>
+                            </button>
+
+                            <p class="text-gray-400 text-sm mb-4 font-bold">請問這個字有幾個音節？</p>
+                            
+                            <div id="t1-feedback-msg" class="h-8 text-red-500 font-bold text-lg mb-2 opacity-0 transition-opacity"></div>
+
+                            <div class="flex justify-center gap-2 md:gap-3 flex-wrap">
+                                <button onclick="checkSyllableAnswer(1)" class="w-10 h-10 md:w-12 md:h-12 rounded-xl border-2 border-gray-200 font-bold text-lg md:text-xl hover:border-blue-400 hover:bg-blue-50 transition">1</button>
+                                <button onclick="checkSyllableAnswer(2)" class="w-10 h-10 md:w-12 md:h-12 rounded-xl border-2 border-gray-200 font-bold text-lg md:text-xl hover:border-blue-400 hover:bg-blue-50 transition">2</button>
+                                <button onclick="checkSyllableAnswer(3)" class="w-10 h-10 md:w-12 md:h-12 rounded-xl border-2 border-gray-200 font-bold text-lg md:text-xl hover:border-blue-400 hover:bg-blue-50 transition">3</button>
+                                <button onclick="checkSyllableAnswer(4)" class="w-10 h-10 md:w-12 md:h-12 rounded-xl border-2 border-gray-200 font-bold text-lg md:text-xl hover:border-blue-400 hover:bg-blue-50 transition">4</button>
+                                <button onclick="checkSyllableAnswer(5)" class="w-10 h-10 md:w-12 md:h-12 rounded-xl border-2 border-gray-200 font-bold text-lg md:text-xl hover:border-blue-400 hover:bg-blue-50 transition">5</button>
+                            </div>
+                        </div>
+
+                        <!-- Completion Screen -->
+                        <div id="t1-completion" class="hidden w-full">
+                            <div class="text-8xl text-yellow-400 mb-4"><i class="fa-solid fa-trophy"></i></div>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-2">建築完成！</h3>
+                            <p class="text-gray-500 mb-6">你已經掌握了所有單字的音節。</p>
+                            <button onclick="switchTab('task2')" class="px-8 py-3 bg-blue-500 text-white rounded-full font-bold shadow-lg hover:bg-blue-600 transition">
+                                前往下一關 (Task 2)
+                            </button>
+                        </div>
+
+                    </div>
+                    <div class="text-center mt-4 text-gray-400 text-sm">
+                        Question <span id="t1-current-num">1</span> / <span id="t1-total-num">10</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TASK 2 -->
+            <section id="task2" class="tab-content hidden max-w-3xl mx-auto text-center">
+                <div class="bg-white p-6 md:p-10 rounded-3xl shadow-lg border border-purple-100">
+                    <div class="w-20 h-20 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
+                        <i class="fa-solid fa-headphones"></i>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-8">任務二：KK 音標助念員</h2>
+                    
+                    <div class="mb-8 border-b border-gray-100 pb-8">
+                        <h3 class="font-bold text-purple-800 text-xl mb-4">Step 1: 線上暖身</h3>
+                        <p class="text-gray-600 mb-4">請先開啟下方對照表，點擊按鈕，練習 <strong>Vowels (母音)</strong> 與 <strong>Consonants (子音)</strong>。</p>
+                        <a href="http://www.gotoabc.url.tw/mobile/kk-list/mobile-kklist.html" target="_blank" class="inline-flex items-center gap-3 px-8 py-3 bg-purple-600 text-white rounded-full font-bold hover:bg-purple-700 transition shadow-lg shadow-purple-200 hover:-translate-y-1 w-full md:w-auto justify-center">
+                            <i class="fa-solid fa-external-link-alt"></i>
+                            前往 GoToABC 音標對照表
+                        </a>
+                    </div>
+
+                    <div class="bg-yellow-50 p-6 rounded-xl border border-yellow-200 text-left">
+                        <h3 class="font-bold text-gray-800 mb-3 text-lg"><span class="bg-orange-500 text-white px-2 py-1 rounded text-sm mr-2">Step 2</span>課本實戰：</h3>
+                        <p class="text-gray-700 leading-relaxed">
+                            接下來，請翻開課本後方的單字總表，找到本單元的單字。針對你不熟悉的音標，直接在下方標註對應的中文助念提示（例如：/ɪ/ 標註「ㄧ」、/æ/ 標註「ㄟ啊」），這能幫助你快速對照、記憶並練習正確發音。
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TASK 3 -->
+            <section id="task3" class="tab-content hidden max-w-5xl mx-auto">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800">任務三：單字紅綠燈</h2>
+                    <p class="text-gray-600 text-sm md:text-base">請誠實面對自己！不會的單字 (紅燈) 將會在下一關進行救援。</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mb-8">
+                    <div class="bg-green-50 p-4 rounded-xl border border-green-200 text-left">
+                        <h4 class="font-bold text-green-700 text-lg mb-2"><i class="fa-solid fa-circle text-green-500"></i> 綠燈 (Go)</h4>
+                        <ul class="list-disc list-inside text-sm text-green-800 space-y-1 pl-2">
+                            <li>這些單字對我來說很容易。</li>
+                            <li>我一看到就會唸。</li>
+                            <li>我可以馬上拼出來。</li>
+                            <li>我清楚知道意思。</li>
+                        </ul>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-200 text-left">
+                        <h4 class="font-bold text-red-700 text-lg mb-2"><i class="fa-solid fa-circle text-red-500"></i> 紅燈 (Stop)</h4>
+                        <ul class="list-disc list-inside text-sm text-red-800 space-y-1 pl-2">
+                            <li>這些單字對我來說很困難。</li>
+                            <li>我不會唸，或常常唸錯。</li>
+                            <li>我拼不起來，或常常拼錯。</li>
+                            <li>我總是記不起意思。</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="traffic-light-container">
+                    <!-- Cards injected by JS -->
+                </div>
+
+                <div class="mt-8 text-center">
+                    <button onclick="switchTab('task4')" class="px-8 py-3 bg-gray-800 text-white rounded-full hover:bg-gray-900 font-bold transition">
+                        前往救援站 <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- TASK 4 -->
+            <section id="task4" class="tab-content hidden max-w-4xl mx-auto">
+                <div class="mb-6 flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <h2 class="text-2xl md:text-3xl font-bold text-gray-800"><i class="fa-solid fa-kit-medical text-red-500"></i> 任務四：單字救援站</h2>
+                        <p class="text-gray-600 text-sm">系統已針對您的紅燈單字，生成了記憶救援建議。</p>
+                    </div>
+                    <div class="bg-red-100 text-red-600 px-4 py-2 rounded-lg font-bold text-sm md:text-base">
+                        需救援數: <span id="rescue-count">0</span>
+                    </div>
+                </div>
+
+                <div id="rescue-container" class="space-y-6">
+                    <!-- Rescue items injected here -->
+                </div>
+            </section>
+
+            <!-- TASK 5 -->
+            <section id="task5" class="tab-content hidden max-w-4xl mx-auto">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">任務五：單字乒乓賽</h2>
+                    <p class="text-gray-600 text-sm">挑戰四個關卡！聽力與口說的全方位訓練！</p>
+                    <div id="browser-warning" class="hidden bg-red-100 text-red-700 p-2 mt-2 rounded text-sm">
+                        <i class="fa-solid fa-triangle-exclamation"></i> 您的瀏覽器可能不支援語音辨識，建議使用 Chrome 或 Edge 瀏覽器。
+                    </div>
+                </div>
+
+                <!-- Level Select (4 Levels Grid) -->
+                <div id="t5-level-select" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 max-w-4xl mx-auto">
+                     <button onclick="startPingPong(1)" class="w-full p-6 bg-white border-2 border-yellow-300 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition group text-center">
+                        <div class="w-12 h-12 mx-auto bg-yellow-100 text-yellow-500 rounded-full flex items-center justify-center text-xl mb-4">
+                             <i class="fa-solid fa-ear-listen"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-1">L1 聽音辨字</h3>
+                        <p class="text-xs text-gray-400">Listen & Choose Word</p>
+                    </button>
+                    
+                     <button onclick="startPingPong(2)" class="w-full p-6 bg-white border-2 border-purple-300 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition group text-center">
+                        <div class="w-12 h-12 mx-auto bg-purple-400 text-white rounded-lg flex items-center justify-center text-xl mb-4">
+                             <i class="fa-solid fa-language"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-1">L2 聽音辨義</h3>
+                        <p class="text-xs text-gray-400">Listen & Choose Meaning</p>
+                    </button>
+
+                     <button onclick="startPingPong(3)" class="w-full p-6 bg-blue-50 border-2 border-blue-300 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition group text-center">
+                        <div class="w-12 h-12 mx-auto bg-blue-500 text-white rounded-full flex items-center justify-center text-xl mb-4">
+                             <i class="fa-solid fa-microphone"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-1">L3 看英說英</h3>
+                        <p class="text-xs text-gray-400">See Word, Speak English</p>
+                    </button>
+
+                     <button onclick="startPingPong(4)" class="w-full p-6 bg-white border-2 border-red-400 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition group text-center">
+                        <div class="w-12 h-12 mx-auto bg-red-100 text-red-500 rounded-full flex items-center justify-center text-xl mb-4">
+                             <i class="fa-solid fa-microphone"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-1">L4 看中說英</h3>
+                        <p class="text-xs text-gray-400">See Chinese, Speak English</p>
+                    </button>
+                </div>
+
+                <!-- Game Area -->
+                <div id="t5-game-area" class="max-w-xl mx-auto relative hidden">
+                     <!-- Progress Bar -->
+                     <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                        <div id="t5-progress" class="bg-green-500 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+
+                    <!-- Card -->
+                    <div class="bg-white rounded-3xl shadow-xl p-4 md:p-8 border-b-8 border-yellow-100 text-center relative overflow-hidden min-h-[350px] md:min-h-[400px] flex flex-col justify-center items-center transition-colors" id="t5-card">
+                         
+                        <!-- Confetti/Firework Overlay -->
+                        <div id="t5-confetti-container" class="absolute inset-0 pointer-events-none z-20"></div>
+
+                        <!-- Success Badge -->
+                        <div id="t5-success-badge" class="absolute top-4 right-4 bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-bold hidden">
+                            <i class="fa-solid fa-check"></i> Great!
+                        </div>
+                        
+                        <!-- Firework Overlay -->
+                        <div id="t5-firework-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden bg-white/80 z-30">
+                            <i class="fa-solid fa-star text-9xl text-yellow-400 firework-icon"></i>
+                            <div class="absolute text-2xl font-bold text-orange-500 mt-32 animate-bounce">Excellent!</div>
+                        </div>
+
+                        <!-- Question Content -->
+                        <div class="w-full mb-4">
+                            <div class="text-sm text-gray-400 font-bold mb-2 uppercase tracking-wide" id="t5-mode-label">Mode Label</div>
+                            <div class="text-4xl md:text-5xl font-bold text-gray-800 mb-4 transition-all break-words" id="t5-main-text">Main Text</div>
+                            <div class="text-lg md:text-xl text-gray-500 min-h-[1.75rem]" id="t5-sub-text">Sub Text</div>
+                        </div>
+
+                        <!-- Multiple Choice Options (Visible for L1 & L2) -->
+                        <div id="t5-options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mt-4 hidden">
+                            <!-- Options injected by JS -->
+                        </div>
+
+                        <!-- Microphone Container (Visible for L3 & L4) -->
+                        <div id="t5-mic-container" class="hidden flex-col items-center justify-center w-full mt-4">
+                            <button id="t5-mic-btn" onclick="toggleMicrophone()" class="relative w-20 h-20 rounded-full bg-gray-100 text-gray-500 text-3xl hover:bg-gray-200 transition-colors shadow-sm focus:outline-none flex items-center justify-center z-10">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+                            <div id="t5-spoken-text" class="mt-4 text-sm font-bold text-gray-600 hidden bg-gray-50 px-4 py-2 rounded-lg border border-gray-200 max-w-full break-words"></div>
+                            <!-- 新增：強制通關按鈕 -->
+                            <button id="t5-skip-btn" onclick="forcePassPingPong()" class="mt-4 hidden text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 py-2 px-4 rounded-full transition font-bold shadow-sm"><i class="fa-solid fa-forward-step"></i> 辨識一直失敗？點此強制通關</button>
+                        </div>
+
+                        <!-- Play Audio Button for L1/L2 Manual Replay -->
+                        <button id="t5-audio-replay-btn" onclick="playCurrentT5Word()" class="hidden mt-6 text-gray-400 hover:text-blue-500 text-sm">
+                            <i class="fa-solid fa-volume-high"></i> 重聽發音
+                        </button>
+
+                    </div>
+
+                    <div class="text-center mt-4 text-gray-400 text-sm">
+                        Word <span id="t5-current-num">1</span> / <span id="t5-total-num">10</span>
+                    </div>
+
+                    <button onclick="exitPingPong()" class="absolute -top-10 md:-top-12 right-0 text-gray-400 hover:text-gray-600 text-sm underline">
+                        Exit Game
+                    </button>
+                </div>
+
+                <!-- Level Transition Screen -->
+                <div id="t5-level-completion" class="hidden text-center mt-8">
+                    <div class="inline-block bg-yellow-100 text-yellow-700 px-8 py-4 rounded-full font-bold text-xl shadow-lg border-2 border-yellow-200 mb-8">
+                        <i class="fa-solid fa-star"></i> Level Complete!
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4" id="t5-completion-title">Level 1 挑戰成功！</h3>
+                    <p class="text-gray-500 mb-8" id="t5-completion-msg">接下來進入下一關。</p>
+                    <button id="t5-next-level-btn" onclick="startNextLevel()" class="px-10 py-4 bg-orange-500 text-white rounded-full hover:bg-orange-600 font-bold transition shadow-xl text-lg animate-bounce w-full md:w-auto">
+                        進入下一關 <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+
+                <!-- Final Completion Screen -->
+                <div id="t5-final-completion" class="hidden text-center mt-8">
+                    <div class="inline-block bg-green-100 text-green-700 px-8 py-4 rounded-full font-bold text-xl animate-bounce shadow-lg border-2 border-green-200">
+                        <i class="fa-solid fa-medal"></i> Ping Pong Master! 四關卡完全制霸！
+                    </div>
+                    <div class="mt-8 flex flex-col md:flex-row justify-center gap-4">
+                        <button onclick="switchTab('task6')" class="px-8 py-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 font-bold transition shadow-lg">
+                            前往 T6 聽音拼字王 <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                        <button onclick="exitPingPong()" class="px-8 py-3 bg-gray-200 text-gray-600 rounded-full hover:bg-gray-300 font-bold transition">
+                            再玩一次
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+             <!-- TASK 6: SPELLING BEE -->
+             <section id="task6" class="tab-content hidden max-w-4xl mx-auto">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2"><i class="fa-solid fa-pen-nib text-indigo-500"></i> 任務六：聽音拼字王</h2>
+                    <p class="text-gray-600 text-sm md:text-base">Spelling Bee Challenge! 聽發音，拼出正確單字。</p>
+                </div>
+
+                <div id="t6-game-area" class="max-w-xl mx-auto relative">
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                        <div id="t6-progress" class="bg-indigo-500 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+
+                    <!-- Question Card -->
+                    <div class="bg-white rounded-3xl shadow-xl p-4 md:p-8 border-b-8 border-indigo-100 text-center relative overflow-hidden min-h-[400px] flex flex-col justify-center items-center">
+                        
+                        <!-- Firework Overlay -->
+                        <div id="t6-firework-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden bg-white/80 z-20">
+                            <i class="fa-solid fa-star text-9xl text-yellow-400 firework-icon"></i>
+                            <div class="absolute text-2xl font-bold text-orange-500 mt-32 animate-bounce">Correct!</div>
+                        </div>
+
+                        <!-- Content -->
+                        <div id="t6-content" class="w-full">
+                            <div class="mb-6">
+                                <button onclick="playCurrentT6Word()" class="w-20 h-20 bg-indigo-100 text-indigo-500 rounded-full text-3xl hover:bg-indigo-200 transition mb-4 shadow-sm animate-pulse-slow">
+                                    <i class="fa-solid fa-volume-high"></i>
+                                </button>
+                                <p class="text-gray-400 text-sm">點擊播放發音 (Click to listen)</p>
+                            </div>
+
+                            <div class="mb-6 relative max-w-xs mx-auto">
+                                <input type="text" id="t6-input" class="w-full text-center text-3xl font-bold text-gray-800 border-b-4 border-gray-300 focus:border-indigo-500 focus:outline-none py-2 bg-transparent uppercase tracking-widest placeholder-gray-200" placeholder="TYPE HERE" autocomplete="off">
+                                <div id="t6-feedback-text" class="h-6 text-red-500 text-sm font-bold mt-2 opacity-0 transition-opacity">Try again!</div>
+                            </div>
+
+                            <button onclick="checkSpelling()" class="px-8 py-3 bg-indigo-500 text-white rounded-full font-bold hover:bg-indigo-600 transition shadow-lg w-full md:w-auto">
+                                Check Answer <i class="fa-solid fa-check ml-1"></i>
+                            </button>
+                        </div>
+
+                        <!-- Completion Screen -->
+                        <div id="t6-completion" class="hidden w-full">
+                            <div class="text-8xl text-indigo-400 mb-4"><i class="fa-solid fa-crown"></i></div>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-2">拼字大師！</h3>
+                            <p class="text-gray-500 mb-6">你已完成所有單字的拼寫挑戰。</p>
+                            <button onclick="switchTab('task7')" class="px-8 py-3 bg-teal-500 text-white rounded-full font-bold shadow-lg hover:bg-teal-600 transition">
+                                前往最終輸出 (Export)
+                            </button>
+                        </div>
+
+                    </div>
+                    <div class="text-center mt-4 text-gray-400 text-sm">
+                        Word <span id="t6-current-num">1</span> / <span id="t6-total-num">10</span>
+                    </div>
+                </div>
+            </section>
+
+             <!-- TASK 7 (Formerly 6) -->
+             <section id="task7" class="tab-content hidden max-w-5xl mx-auto">
+                
+                <div class="mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg shadow-sm flex items-start gap-4">
+                    <div class="bg-blue-100 p-3 rounded-full text-blue-600 shrink-0">
+                        <i class="fa-brands fa-google text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-blue-800 mb-1">任務繳交提醒</h3>
+                        <p class="text-blue-900 text-sm md:text-base">
+                            恭喜完成所有任務！請務必將下方的學習歷程報告書 **截圖** 或 **列印成 PDF**，並上傳至 **Google Classroom** 的作業區繳交。
+                        </p>
+                    </div>
+                </div>
+
+                <div id="printable-report" class="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-teal-100">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b-2 border-teal-500 pb-4 mb-6">
+                        <div class="mb-4 md:mb-0">
+                            <h2 class="text-2xl md:text-3xl font-bold text-gray-800"><i class="fa-solid fa-graduation-cap text-teal-500"></i> 學習歷程報告書</h2>
+                            <p class="text-gray-500 mt-1">單字建築師 Vocabulary Architect</p>
+                        </div>
+                        <div class="text-left md:text-right w-full md:w-auto">
+                            <div class="text-2xl font-bold text-orange-500" id="report-unit-title">Unit 6</div>
+                            <div class="text-lg text-blue-500 font-bold" id="report-student-name">Student</div>
+                            <div class="text-sm text-gray-400" id="report-date"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                        <div class="bg-gray-50 p-4 rounded-xl text-center border border-gray-200">
+                            <div class="text-sm text-gray-500">單字總數</div>
+                            <div class="text-2xl font-bold text-gray-800" id="report-total">0</div>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-xl text-center border border-blue-200">
+                            <div class="text-sm text-blue-600">音節完成度 (T1)</div>
+                            <div class="text-2xl font-bold text-blue-600" id="report-t1-syllable">0%</div>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-xl text-center border border-green-200">
+                            <div class="text-sm text-green-600">綠燈掌握度</div>
+                            <div class="text-2xl font-bold text-green-600" id="report-mastery">0%</div>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-xl text-center border border-yellow-200">
+                            <div class="text-sm text-yellow-600">聽力口說綜合 (T5)</div>
+                            <div class="text-2xl font-bold text-yellow-600" id="report-speech">0%</div>
+                        </div>
+                         <div class="bg-indigo-50 p-4 rounded-xl text-center border border-indigo-200">
+                            <div class="text-sm text-indigo-600">拼字完成度 (T6)</div>
+                            <div class="text-2xl font-bold text-indigo-600" id="report-spelling">0%</div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <div class="text-right mb-2">
+                            <span class="text-xs text-gray-500"><i class="fa-solid fa-forward-step text-orange-400"></i> 表示曾使用強制通關</span>
+                        </div>
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-teal-50 border-b border-teal-200">
+                                    <th class="p-3 font-bold text-teal-800 w-1/4">單字 (Word)</th>
+                                    <th class="p-3 font-bold text-teal-800 text-center">音節 (T1)</th>
+                                    <th class="p-3 font-bold text-teal-800 text-center">自評 (T3)</th>
+                                    <th class="p-3 font-bold text-teal-800 text-center">聽說綜合 (T5)</th>
+                                    <th class="p-3 font-bold text-teal-800 text-center">拼字 (T6)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-8 pt-6 border-t border-gray-100 text-center space-y-2">
+                        <p class="text-gray-600 font-bold">Great Job! Keep learning.</p>
+                        <p class="text-lg text-blue-600 font-bold mt-2">接下來請完成Google Classroom 的作業。</p>
+                        <p class="text-xs text-gray-400">請將此頁面存為 PDF，並上傳至 Google Classroom。</p>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-center gap-4 no-print pb-8">
+                    <button id="pdf-download-btn" onclick="downloadPDF()" class="px-8 py-3 bg-teal-600 text-white rounded-full hover:bg-teal-700 font-bold transition shadow-lg flex items-center gap-2">
+                        <i class="fa-solid fa-download"></i> 直接下載 PDF
+                    </button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- SAFE STORAGE WRAPPER ---
+        const memoryStorage = {};
+        function safeSetItem(key, value) {
+            try { localStorage.setItem(key, value); } 
+            catch(e) { memoryStorage[key] = value; console.warn("Using in-memory storage due to sandbox limits."); }
+        }
+        function safeGetItem(key) {
+            try { return localStorage.getItem(key) || memoryStorage[key]; } 
+            catch(e) { return memoryStorage[key] || null; }
+        }
+
+        // --- DATA CONFIGURATION ---
+        const unitData = {
+            "U1": `foreign | for/eign | [ˈfɔrən] | 外國的
+than | than | [ðæn] | 比
+friendly | friend/ly | [ˈfrɛndli] | 友善的
+convenient | con/ven/ient | [kənˈvinjənt] | 便利的
+pork | pork | [pɔrk] | 豬肉
+beef | beef | [bif] | 牛肉
+delicious | de/li/cious | [dɪˈlɪʃəs] | 美味的
+feel | feel | [fil] | 感到
+steak | steak | [stek] | 牛排
+menu | men/u | [ˈmɛnju] | 菜單
+waitress | wait/ress | [ˈwetrɪs] | 女服務生
+ham | ham | [hæm] | 火腿
+butter | but/ter | [ˈbʌtɚ] | 奶油
+medium | me/di/um | [ˈmidiəm] | 五分熟;中等的
+meat | meat | [mit] | 肉
+smell | smell | [smɛl] | 聞起來;氣味
+taste | taste | [test] | 嚐起來;味道
+as... as... | as/as | [æz æz] | 如同...一樣...
+get around | get/a/round | [gɛt əˈraʊnd] | 各處旅行
+dish | dish | [dɪʃ] | 菜餚
+more | more | [mɔr] | 更...
+get | get | [gɛt] | 變成
+sound | sound | [saʊnd] | 聽起來
+top | top | [tɑp] | 頂部(的)
+fries | fries | [fraɪz] | 薯條
+knife | knife | [naɪf] | 刀子
+fork | fork | [fɔrk] | 叉子
+noodle | noo/dle | [ˈnudl] | 麵
+chopsticks | chop/sticks | [ˈtʃɑpˌstɪks] | 筷子
+spoon | spoon | [spun] | 湯匙
+fried chicken | fried/chick/en | [fraɪd ˈtʃɪkən] | 炸雞
+waiter | wait/er | [ˈwetɚ] | 男服務生
+strawberry | straw/ber/ry | [ˈstrɔˌbɛri] | 草莓
+bun | bun | [bʌn] | 小圓麵包
+# Reading
+earth | earth | [ɜrθ] | 地球
+bring | bring | [brɪŋ] | 帶來;攜帶
+smile | smile | [smaɪl] | 微笑
+land | land | [lænd] | 陸地;落地
+rock | rock | [rɑk] | 岩石
+shape | shape | [ʃep] | 形狀
+clear | clear | [klɪr] | 晴朗的;清楚的
+comfortable | com/fort/a/ble | [ˈkʌmfɚtəb!] | 舒適的
+fill | fill | [fɪl] | 充滿;裝滿
+pack | pack | [pæk] | 打包;塞進`,
+            "U2": `grass | grass | [græs] | 草地
+red fire ant | red/fire/ant | [rɛd faɪr ænt] | 紅火蟻
+dangerous | dan/ger/ous | [ˈdendʒərəs] | 危險的
+bite | bite | [baɪt] | 咬;咬(傷)
+death | death | [dɛθ] | 死亡
+kick | kick | [kɪk] | 踢
+themselves | them/selves | [ðəmˈsɛlvz] | 他們自己
+kill | kill | [kɪl] | 殺死
+stay away from | stay/a/way/from | [ste əˈwe frɑm] | 遠離...
+agree | a/gree | [əˈgri] | 同意
+circle | cir/cle | [ˈsɜrk!] | 圓圈
+myself | my/self | [maɪˈsɛlf] | 我自己
+snake | snake | [snek] | 蛇
+wet | wet | [wɛt] | 潮濕的
+scary | scar/y | [ˈskɛri] | 令人害怕的
+deep | deep | [dip] | 深的
+true | true | [tru] | 真實的
+most | most | [most] | 最...
+give a hand | give/a/hand | [gɪv ə hænd] | 幫助...
+spider | spi/der | [ˈspaɪdɚ] | 蜘蛛
+gram | gram | [græm] | 公克
+insect | in/sect | [ˈɪnsɛkt] | 昆蟲
+bee | bee | [bi] | 蜜蜂
+inch | inch | [ɪntʃ] | 吋
+wide | wide | [waɪd] | 寬的
+kilogram | kil/o/gram | [ˈkɪləˌgræm] | 公斤
+nature | na/ture | [ˈnetʃɚ] | 大自然
+below | be/low | [bəˈlo] | 在...之下
+sea level | sea/lev/el | [si ˈlɛv!] | 海平面
+mile | mile | [maɪl] | 英里
+feet | feet | [fit] | 英尺
+# Reading
+smart | smart | [smɑrt] | 聰明的
+traffic | traf/fic | [ˈtræfɪk] | 交通
+appear | ap/pear | [əˈpɪr] | 似乎
+air | air | [ɛr] | 空氣
+far | far | [fɑr] | 遠
+slow | slow | [slo] | 放慢
+light | light | [laɪt] | 燈;光
+cross | cross | [krɔs] | 穿越`,
+            "U3": `loudly | loud/ly | [ˈlaʊdli] | 大聲地
+hard | hard | [hɑrd] | 努力地;困難的
+well | well | [wɛl] | 好地
+share | share | [ʃɛr] | 分享
+weak | weak | [wik] | 虛弱的
+hen | hen | [hɛn] | 母雞
+dirty | dirt/y | [ˈdɜrti] | 髒的
+bow | bow | [baʊ] | 鞠躬
+without | with/out | [wɪˈðaʊt] | 沒有
+quickly | quick/ly | [ˈkwɪkli] | 快地
+web page | web/page | [ˈwɛb ˌpedʒ] | 網頁
+service | serv/ice | [ˈsɜrvɪs] | 服務
+wise | wise | [waɪz] | 明智的
+cheer | cheer | [tʃɪr] | 歡呼
+celebrate | cel/e/brate | [ˈsɛləˌbret] | 慶祝
+mean | mean | [min] | 刻薄的
+make | make | [mek] | 製作;使...
+break | break | [brek] | 休息
+over | o/ver | [ˈovɚ] | 超過
+treat | treat | [trit] | 對待
+have | have | [hæv] | 使...
+grape | grape | [grep] | 葡萄
+goose | goose | [gus] | 鵝
+duck | duck | [dʌk] | 鴨
+goat | goat | [got] | 山羊
+sheep | sheep | [ʃip] | 綿羊
+peach | peach | [pitʃ] | 桃子
+turtle | tur/tle | [ˈtɜrt!] | 烏龜
+pear | pear | [pɛr] | 梨子
+papaya | pa/pa/ya | [pəˈpaɪə] | 木瓜
+vegetable | veg/e/ta/ble | [ˈvɛdʒətəb!] | 蔬菜
+guava | gua/va | [ˈgwɑvə] | 芭樂
+tomato | to/ma/to | [təˈmeto] | 番茄
+watermelon | wa/ter/mel/on | [ˈwɔtɚˌmɛlən] | 西瓜
+# Reading
+American | A/mer/i/can | [əˈmɛrɪkən] | 美國人
+million | mil/lion | [ˈmɪljən] | 百萬
+pound | pound | [paʊnd] | 磅
+pick | pick | [pɪk] | 採摘
+bean | bean | [bin] | 豆
+cent | cent | [sɛnt] | 美分
+chance | chance | [tʃæns] | 機會
+choose | choose | [tʃuz] | 選擇`,
+            "U4": `typhoon | ty/phoon | [taɪˈfun] | 颱風
+blow | blow | [blo] | 吹
+rose | rose | [roz] | 玫瑰花
+balcony | bal/co/ny | [ˈbælkəni] | 陽台
+must | must | [mʌst] | 必須
+prepare | pre/pare | [prɪˈpɛr] | 準備
+should | should | [ʃʊd] | 應該
+candle | can/dle | [ˈkænd!] | 蠟燭
+radio | ra/di/o | [ˈrediˌo] | 收音機
+news | news | [njuz] | 新聞
+if | if | [ɪf] | 如果
+or | or | [ɔr] | 否則
+have to | have/to | [ˈhæv tə] | 必須
+go out | go/out | [go aʊt] | 熄滅
+train | train | [tren] | 訓練
+face | face | [fes] | 面對
+try one's best | try/one's/best | [traɪ wʌnz bɛst] | 盡力而為
+turn on | turn/on | [tɜrn ɑn] | 打開
+latest | lat/est | [ˈletɪst] | 最新的
+star | star | [stɑr] | 星星
+shine | shine | [ʃaɪn] | 閃耀
+giant | gi/ant | [ˈdʒaɪənt] | 巨大的
+wave | wave | [wev] | 浪
+rainbow | rain/bow | [ˈrenˌbo] | 彩虹
+pretty | pret/ty | [ˈprɪti] | 漂亮的
+garden | gar/den | [ˈgɑrdn] | 花園
+frog | frog | [frɑg] | 青蛙
+noise | noise | [nɔɪz] | 噪音
+pond | pond | [pɑnd] | 池塘
+noisy | nois/y | [ˈnɔɪzi] | 嘈雜的
+# Reading
+earthquake | earth/quake | [ˈɜrθˌkwek] | 地震
+bravely | brave/ly | [ˈbrevli] | 勇敢地
+sharp | sharp | [ʃɑrp] | 尖銳的
+reach | reach | [ritʃ] | 到達
+space | space | [spes] | 空間
+size | size | [saɪz] | 大小;尺寸
+as | as | [æz] | 作為;如同
+times | times | [taɪmz] | 倍`,
+            "U5": `although | al/though | [ɔlˈðo] | 雖然
+matter | mat/ter | [ˈmætɚ] | 問題
+sore throat | sore/throat | [sor θrot] | 喉嚨痛
+explain | ex/plain | [ɪkˈsplen] | 解釋
+cough | cough | [kkɔf] | 咳嗽
+probably | prob/a/bly | [ˈprɑbəbli] | 很可能
+take care of | take/care/of | [tek kɛr ʌv] | 照顧
+noon | noon | [nun] | 中午
+both | both | [boθ] | 兩者(都)
+medicine | med/i/cine | [ˈmɛdəsn] | 藥
+honey | hon/ey | [ˈhʌni] | 蜂蜜
+lemon | lem/on | [ˈlɛmən] | 檸檬
+useful | use/ful | [ˈjusfəl] | 有用的
+stand | stand | [stænd] | 攤位
+feel like | feel/like | [fil laɪk] | 想要
+cold | cold | [kold] | 感冒
+well | well | [wɛl] | 健康的
+treat | treat | [trit] | 治療
+head | head | [hɛd] | 頭
+headache | head/ache | [ˈhɛdˌek] | 頭痛
+stomachache | stom/ach/ache | [ˈstʌməkˌek] | 胃痛
+fever | fe/ver | [ˈfivɚ] | 發燒
+runny nose | run/ny/nose | [ˈrʌni noz] | 流鼻水
+knee | knee | [ni] | 膝蓋
+nail | nail | [nel] | 指甲
+finger | fin/ger | [ˈfɪŋgɚ] | 手指
+neck | neck | [nɛk] | 脖子
+shoulder | shoul/der | [ˈʃoldɚ] | 肩膀
+# Reading
+bakery | bak/er/y | [ˈbekəri] | 麵包店
+common | com/mon | [ˈkɑmən] | 常見的
+actually | ac/tual/ly | [ˈæktʃʊəli] | 實際上
+helpful | help/ful | [ˈhɛlpfəl] | 有幫助的
+root | root | [rut] | 根
+reason | rea/son | [ˈrizn] | 原因
+power up | pow/er/up | [ˈpaʊɚ ʌp] | 增強力量
+sweet | sweet | [swit] | 甜食
+sharp | sharp | [ʃɑrp] | 敏銳的`,
+            "U6": `pass | pass | [pæs] | 傳遞
+throw | throw | [θro] | 丟;投擲
+point | point | [pɔɪnt] | 得分
+win | win | [wɪn] | 贏
+until | un/til | [ənˈtɪl] | 直到
+member | mem/ber | [ˈmɛmbɚ] | 成員
+group | group | [grup] | 團體
+fail | fail | [fel] | 失敗
+test | test | [tɛst] | 考試
+afraid | a/fraid | [əˈfred] | 害怕的
+forget | for/get | [fɚˈgɛt] | 忘記
+fresh | fresh | [frɛʃ] | 新鮮的
+count in | count/in | [kaʊnt ɪn] | 算...一份
+begin | be/gin | [bɪˈgɪn] | 開始
+meeting | meet/ing | [ˈmitɪŋ] | 會議
+come on | come/on | [kʌm ɑn] | 快點
+excuse | ex/cuse | [ɪkˈskjus] | 藉口
+around the corner | a/round/the/cor/ner | [əˈraʊnd ðə ˈkɔrnɚ] | 即將來臨
+grade | grade | [gred] | 成績
+hold back | hold/back | [hold bæk] | 阻礙
+few | few | [fju] | 很少
+simple | sim/ple | [ˈsɪmp!] | 簡單的
+expect | ex/pect | [ɪkˈspɛkt] | 預計
+mistake | mis/take | [mɪˈstek] | 錯誤
+angle | an/gle | [ˈæŋg!] | 角度
+allow | al/low | [əˈlaʊ] | 允許
+laugh | laugh | [læf] | 笑
+keep in mind | keep/in/mind | [kip ɪn maɪnd] | 記住
+# Reading
+honest | hon/est | [ˈɑnɪst] | 誠實的
+lead to | lead/to | [lid tu] | 導致
+push | push | [pʊʃ] | 推
+excellent | ex/cel/lent | [ˈɛkslənt] | 優秀的
+be able to | be/a/ble/to | [bi ˈeb! tu] | 能夠
+define | de/fine | [dɪˈfaɪn] | 下定義
+matter | mat/ter | [ˈmætɚ] | 重要
+picture | pic/ture | [ˈpɪktʃɚ] | 想像
+as for | as/for | [æz fɔr] | 至於
+to the full | to/the/full | [tu ðə fʊl] | 盡可能`
+        };
+
+        // Added textbook vocabulary data (B1, B3, B5; 683 entries)
+        const bookData = {"B1":{"U1":"handsome | hand/some | [ˈhænsəm] | 英俊的\nnew | new | [nu] | 新的\nclassmate | class/mate | [ˈklæsˌmeɪt] | 同學\nyoung | young | [jəŋ] | 年輕的\nwoman | wom/an | [ˈwʊmən] | 女人（複數為 ）\nvery | very | [ˈvɛri] | 非常\nbeautiful | beau/ti/ful | [ˈbjutəfəl] | 美麗的\ntoo | too | [tu] | 也\nNice to meet you. | Nice/to/meet/you. | [nis tɪ mit ju.] | 很高興認識你\ncousin | cou/sin | [ˈkəzən] | 堂表兄弟姐妹\nreally | re/al/ly | [ˈrɪli] | 真地\nyear(s) old | year(s)/old | [year(s) oʊld] | …歲\nI see. | I/see. | [isee.] | 我知道了\nsinger | sing/er | [ˈsɪŋər] | 歌手\noffice worker | of/fice/work/er | [ˈɔfəs ˈwərkər] | 上班族\nhousewife | house/wife | [ˈhaʊsˌwaɪf] | 家庭主婦\npolice officer | po/lice/of/fi/cer | [pəˈlis ˈɔfɪsər] | 警察\nwriter | writ/er | [ˈraɪtər] | 作家\nuncle | un/cle | [ˈəŋkəl] | 叔伯；舅舅\naunt | aunt | [ɔnt] | 阿姨；姑姑\nwife | wife | [waɪf] | 妻子\ndaughter | daugh/ter | [ˈdɔtər] | 女兒\nhusband | hus/band | [ˈhəzbənd] | 丈夫\nson | son | [sən] | 兒子\n# Reading\ndear | dear | [dɪr] | 親愛的\nfamily | fam/i/ly | [ˈfæməli] | 家庭；家人\nelementary school | el/e/men/tary/school | [ˌɛləˈmɛnʧri skul] | 國小\njunior high school | ju/nior/high/school | [ˈʤunjər haɪ skul] | 國中\nbaby | ba/by | [ˈbeɪbi] | 嬰兒；年幼的","U2":"house | house | [haʊs] | 房子\nparents | par/ents | [ˈpɛrənts] | 父母親\nliving room | liv/ing/room | [ˈlɪvɪŋ rum] | 客廳\nwall | wall | [wɔl] | 牆壁\npurple | pur/ple | [ˈpərpəl] | 紫色（的）\nfavorite | fa/vorite | [ˈfeɪvərɪt] | 最喜愛（的）\ncolor | col/or | [ˈkələr] | 顏色\nkitchen | kitch/en | [ˈkɪʧən] | 廚房\ndining room | din/ing/room | [ˈdaɪnɪŋ rum] | 飯廳\nbut | but | [bət] | 但是\ngray | gray | [greɪ] | 灰色（的）\nbrown | brown | [braʊn] | 棕色（的）\ncookie | cook/ie | [ˈkʊki] | 餅乾\nmice | mice | [maɪs] | 老鼠（為 的複數）\nmaybe | may/be | [ˈmeɪbi] | 可能\nsofa | so/fa | [ˈsoʊfə] | 沙發\nhungry | hun/gry | [ˈhəŋgri] | 餓的\nnotebook | note/book | [ˈnoʊtˌbʊk] | 筆記本\nmarker | mark/er | [ˈmɑrkər] | 記號筆；彩色筆\nbrush | brush | [brəʃ] | 毛筆；筆刷\ngift | gift | [gɪft] | 禮物\npencil case | pen/cil/case | [ˈpɛnsəl keɪs] | 鉛筆盒\nbathroom | bath/room | [ˈbæθˌrum] | 浴室；廁所\ntable | ta/ble | [ˈteɪbəl] | 桌子\nbedroom | bed/room | [ˈbɛˌdrum] | 臥室\nnear | near | [nɪr] | 在…附近\nbetween | be/tween | [bɪtˈwin] | 在…之間\nbehind | be/hind | [bɪˈhaɪnd] | 在…後面\nin front of | in/front/of | [ɪn frənt əv] | 在…前面\n# Reading\nspecial | spe/cial | [ˈspɛʃəl] | 特別的\ninside | in/side | [ˌɪnˈsaɪd] | 在…裡面\nright | right | [raɪt] | 就\neach other | each/oth/er | [iʧ ˈəðər] | 彼此；互相\nabove | a/bove | [əˈbəv] | 在…上方；在上方\nenough | e/nough | [ɪˈnəf] | 足夠（的）\nperson | per/son | [ˈpərsən] | 人（複數為 或","U3":"guy | guy | [gaɪ] | 人；傢伙\nmagic | mag/ic | [ˈmæʤɪk] | 神奇的；魔法\nwith | with | [wɪθ] | 用；和\ncan | can | [kən] | 可以；會\nmany | many | [ˈmɛni] | 許多（的）\nplace | place | [pleɪs] | 地方\nuse | use | [juz] | 使用\nsure | sure | [ʃʊr] | 當然；確定的\nlet's... | let's... | [lɛts...] | 讓我們一起…\ncareful | care/ful | [ˈkɛrfəl] | 小心的\nmuseum | mu/se/um | [mˈjuziəm] | 博物館\nHurry! | Hur/ry! | [ˈhəri!] | 快點！\nplease | please | [pliz] | 請；拜託\nwait | wait | [weɪt] | 等待\nman | man | [mæn] | 男人（複數為 ）\nnow | now | [naʊ] | 現在\nor | or | [ər] | 或者\ntime | time | [taɪm] | 次；時間\nwake up | wake/up | [weɪk əp] | 醒來；叫醒…\nclass | class | [klæs] | 課；班級\nOh my! | Oh/my! | [oʊ maɪ!] | 天哪！\nsee | see | [si] | 看見\nquiet | qui/et | [kwaɪət] | 安靜的\nturn off | turn/off | [tərn ɔf] | 關掉\nsign | sign | [saɪn] | 標誌\ntalk | talk | [tɔk] | 說話\nfight | fight | [faɪt] | 吵架；打架\nturn | turn | [tərn] | （依次輪到的）機會\n# Reading\nfollow | fol/low | [ˈfɑloʊ] | 遵守；跟隨\nrule | rule | [rul] | 規則\nsafe | safe | [seɪf] | 安全的\nwash | wash | [wɑʃ] | 清洗\nhand | hand | [hænd] | 手\nafter class | af/ter/class | [ˈæftər klæs] | 下課後","U4":"music video | mu/sic/video | [mˈjuzɪk ˈvɪdioʊ] | 音樂影片\nband | band | [bænd] | 樂團\ntake a look | take/a/look | [teɪk alook] | 看一看\nall | all | [ɔl] | 所有的\ncute | cute | [kjut] | 可愛的\ngreat | great | [greɪt] | 棒的\nfree | free | [fri] | 有空的\nweekend | week/end | [ˈwiˌkɪnd] | 週末\nSaturday | Sat/ur/day | [ˈsæˌtɪˌdeɪ] | 星期六\ntogether | to/geth/er | [təˈgɛðər] | 一起\nready | read/y | [ˈrɛdi] | 準備好的\np.m. | p./m. | [p.m.] | 下午；晚上\no'clock | o'/clock | [əˈklɑk] | …點鐘\nday | day | [deɪ] | 日；天\ntoday | to/day | [təˈdeɪ] | 今天\nFriday | Fri/day | [ˈfraɪˌdeɪ] | 星期五\nSunday | Sun/day | [ˈsənˌdi] | 星期日\nMonday | Mon/day | [ˈmənˌdeɪ] | 星期一\nTuesday | Tues/day | [ˈtuzˌdeɪ] | 星期二\nWednesday | Wednes/day | [ˈwɛnzˌdeɪ] | 星期三\nThursday | Thurs/day | [ˈθərzˌdeɪ] | 星期四\nweek | week | [wik] | 週；星期\na.m. | a./m. | [a.m.] | 上午；凌晨\nstudy | stud/y | [ˈstədi] | 研讀\nEnglish | Eng/lish | [ˈɪŋlɪʃ] | 英文\ntake a walk | take/a/walk | [teɪk awalk] | 散步\nmovie | mov/ie | [ˈmuvi] | 電影\ntake a picture | take/a/pic/ture | [teɪk apicture] | 拍照\n# Reading\nparty | par/ty | [ˈpɑrti] | 派對；宴會\nreport | re/port | [rɪˈpɔrt] | 報導\npopular | pop/u/lar | [ˈpɑpjələr] | 受歡迎的\nfan | fan | [fæn] | …迷\nshake hands | shake/hands | [ʃeɪk hænz] | 握手\neveryone | ev/ery/one | [ˈɛvriˌwən] | 每個人\nsign | sign | [saɪn] | 簽名","U5":"date | date | [deɪt] | 日期\nNovember | No/vem/ber | [noʊˈvɛmbər] | 十一月\nfirst | first | [fərst] | 第一（的）\nThanksgiving | Thanks/giv/ing | [ˌθæŋksˈgɪvɪŋ] | 感恩節\nimportant | im/por/tant | [ˌɪmˈpɔrtənt] | 重要的\nholiday | hol/i/day | [ˈhɑlɪˌdeɪ] | 節日；假日\nwhen | when | [wɪn] | 何時\nfourth | fourth | [fɔrθ] | 第四（的）\nbirthday | birth/day | [ˈbərθˌdeɪ] | 生日\nalso | al/so | [ˈɔlsoʊ] | 也；此外\nbefore | be/fore | [ˌbiˈfɔr] | 在…之前\naround | a/round | [əraʊnd] | 圍繞；在…附近\nHow about...? | How/about...? | [haʊ əˈbaʊt...?] | 那…呢？\nsecond | sec/ond | [ˈsɛkənd] | 第二（的）\nnext | next | [nɛkst] | 下一個的\nmonth | month | [mənθ] | 月份\nJanuary | Jan/u/ary | [ˈʤænjuˌɛri] | 一月\nFebruary | Feb/ru/ary | [ˈfɛbruˌɛri] | 二月\nMarch | March | [mɑrʧ] | 三月\nApril | A/pril | [ˈeɪprəl] | 四月\nMay | May | [meɪ] | 五月\nJune | June | [ʤun] | 六月\nJuly | Ju/ly | [ˌʤuˈlaɪ] | 七月\nAugust | Au/gust | [ˈɔgəst] | 八月\nSeptember | Sep/tem/ber | [sɛpˈtɛmbər] | 九月\nOctober | Oc/to/ber | [ɑkˈtoʊbər] | 十月\nDecember | De/cem/ber | [dɪˈsɛmbər] | 十二月\nNew Year's Eve | New/Year's/Eve | [nu jɪrz iv] | 元旦前夕\nChristmas | Christ/mas | [ˈkrɪsməs] | 聖誕節\nthird | third | [θərd] | 第三（的）\n# Reading\nanimal | an/i/mal | [ˈænəməl] | 動物\ncow | cow | [kaʊ] | 牛；乳牛\nthink | think | [θɪŋk] | 想；認為\nlucky | luck/y | [ˈləki] | 幸運的\nonly | on/ly | [ˈoʊnli] | 只是；唯一的\ndinner | din/ner | [ˈdɪnər] | 晚餐","U6":"lion | li/on | [laɪən] | 獅子\nover there | over/there | [ˈoʊvər ðɛr] | 在那裡\nking | king | [kɪŋ] | 國王\nsome | some | [səm] | 一些（的）\nelephant | ele/phant | [ˈɛləfənt] | 大象\nso | so | [soʊ] | 如此地\nany | any | [ˈɛni] | 任何（的）\ntiger | ti/ger | [ˈtaɪgər] | 老虎\nzebra | ze/bra | [ˈzibrə] | 斑馬\nback | back | [bæk] | 背；後面\nhelp | help | [hɛlp] | 幫助；幫忙\nright | right | [raɪt] | 正確的\nmonkey | mon/key | [ˈməŋki] | 猴子\nfox | fox | [fɑks] | 狐狸\nhorse | horse | [hɔrs] | 馬\nrat | rat | [ræt] | 老鼠\nbear | bear | [bɛr] | 熊\n# Reading\nworld | world | [wərld] | 世界\nexample | ex/am/ple | [ɪgˈzæmpəl] | 實例\nbug | bug | [bəg] | 蟲子\nfood | food | [fud] | 食物\nclean up | clean/up | [klin əp] | 清理；打掃\nfull | full | [fʊl] | 飽的；滿的\nhealthy | health/y | [ˈhɛlθi] | 健康的\nthanks to | thanks/to | [θæŋks tɪ] | 幸虧；由於\nclean | clean | [klin] | 乾淨的"},"B3":{"U1":"summer vacation | sum/mer/va/ca/tion | [ˈsəmər veɪˈkeɪʃən] | 暑假\nweather | weath/er | [ˈwɛðər] | 天氣\nTaiwan | Tai/wan | [ˈtaɪˈwɑn] | 臺灣\nfun | fun | [fən] | 樂趣；有趣的\nsnow | snow | [snoʊ] | 下雪；雪\nsend | send | [sɛnd] | 寄；送\npostcard | post/card | [ˈpoʊˌskɑrd] | 明信片\nborrow | bor/row | [ˈbɑˌroʊ] | 借（入）\nlend | lend | [lɛnd] | 借（ 出）\nglove | glove | [gləv] | 手套\nkind | kind | [kaɪnd] | 親切的；有同情心的\nlovely | love/ly | [ˈləvli] | 可愛的；美好的\njacket | jack/et | [ˈʤækɪt] | 夾克\ngive | give | [gɪv] | 給予\nhate | hate | [heɪt] | 討厭\nheavy | heav/y | [ˈhɛvi] | 厚重的；大量的\nseason | sea/son | [ˈsizən] | 季節\nspring | spring | [spərɪŋ] | 春天\ncloud | cloud | [klaʊd] | 雲\nsun | sun | [sən] | 太陽\nautumn | au/tumn | [ˈɔtəm] | 秋天（ ）\nwind | wind | [wɪnd] | 風\nwinter | win/ter | [ˈwɪntər] | 冬天\nsunny | sun/ny | [ˈsəni] | 陽光普照的\nsnowy | snow/y | [snoʊi] | 有雪的；下雪的\nrainy | rain/y | [ˈreɪni] | 有雨的；下雨的\ncloudy | cloud/y | [ˈklaʊdi] | 多雲的\nwindy | wind/y | [ˈwɪndi] | 風大的\ncool | cool | [kul] | 涼爽的\n# Reading\nspeak | speak | [spik] | 講話\nmad | mad | [mæd] | 生氣的\nin fact | in/fact | [ɪn fækt] | 事實上\nmean | mean | [min] | 意指\nanother | an/oth/er | [əˈnəðər] | 另一（ 的）\norder | or/der | [ˈɔrdər] | 點餐；訂購\nstrange | strange | [streɪnʤ] | 奇怪的；陌生的\nsoon | soon | [sun] | 很快地\nRd. | Rd. | [ɑr di.] | 路（ 的縮寫）\nROC | R/O/C | [rɑk] | 中華民國","U2":"club | club | [kləb] | 社團\nmake up one's mind | make/up/one's/mind | [meɪk əp wənz maɪnd] | 下定決心\ninteresting | in/ter/est/ing | [ˈɪntəˌrɛstɪŋ] | 有趣的\nscience | sci/ence | [saɪəns] | 科學\nsubject | sub/ject | [ˈsəbʤɪkt] | 學科；主題\nhear | hear | [hir] | 聽見\nsame | same | [seɪm] | 相同的\ncall | call | [kɔl] | 打電話；呼叫\ntell | tell | [tɛl] | 告訴\npull one's leg | pull/one's/leg | [pʊl wənz lɛg] | 開玩笑\npoor | poor | [pur] | 不佳的；貧窮的\nend | end | [ɛnd] | 結尾；結束\nwhose | whose | [huz] | 誰的（東西）\ncamera | cam/era | [ˈkæmərə] | 相機\nmine | mine | [maɪn] | 我的（東西）\nWhat's up? | What's/up? | [wəts əp?] | 怎麼了？\nwhen | when | [wɪn] | 當…\nback | back | [bæk] | 返回\nsign up | sign/up | [saɪn əp] | 報名參加\nwrong | wrong | [rɔŋ] | 錯誤的\nhold on | hold/on | [hoʊld ɔn] | 稍候\nmath | math | [mæθ] | 數學\nsoccer | soc/cer | [ˈsɑkər] | 足球\nChinese | Chi/nese | [ʧaɪˈniz] | 中國的；中國人；中文\nhistory | his/to/ry | [ˈhɪstəri] | 歷史\nviolin | vi/o/lin | [vaɪəˈlɪn] | 小提琴\nrobot | ro/bot | [ˈroʊˌbət] | 機器人\nhealth | health | [hɛlθ] | 健康\nPE | P/E | [pe] | 體育\nlook for | look/for | [lʊk fər] | 尋找\n# Reading\nMs. | Ms. | [mɪz.] | 女士\nengineer | en/gi/neer | [ˈɛnʤəˈnɪr] | 工程師\nlesson | les/son | [ˈlɛsən] | 課；課程\ndifficult | dif/fi/cult | [ˈdɪfəkəlt] | 困難的\nteach | teach | [tiʧ] | 教導\nown | own | [oʊn] | 自己的；擁有\nfinish | fin/ish | [ˈfɪnɪʃ] | 完成；結束\nfestival | fes/ti/val | [ˈfɛstɪvəl] | 節慶\nstart | start | [stɑrt] | 開始\nchoice | choice | [ʧɔɪs] | 選擇\nnot... at all | not.../at/all | [nɑt... æt ɔl] | 一點也不…\nfree | free | [fri] | 免費的\nshow | show | [ʃoʊ] | 表演；節目\nmiss out | miss/out | [mɪs aʊt] | 錯過機會","U3":"someone | some/one | [ˈsəmˌwən] | 某人\nbreak | break | [breɪk] | 打破；損壞\ndo the dishes | do/the/dish/es | [du ðə ˈdɪʃɪz] | 洗碗盤\nhalf | half | [hæf] | 一半；二分之一\npast | past | [pæst] | 經過；過去（的）\nleave | leave | [liv] | 離開\nquarter | quar/ter | [kˈwɔrtər] | 十五分鐘；四分之一\nremember | re/mem/ber | [rɪˈmɛmbər] | 記得\ntake it easy | take/it/easy | [teɪk ɪt ˈizi] | 放輕鬆\ncool down | cool/down | [kul daʊn] | 冷靜一下\nclose | close | [kloʊz] | 靠近的\nfeed | feed | [fid] | 餵養\npet | pet | [pɛt] | 寵物\nsweep | sweep | [swip] | 掃\nfloor | floor | [flɔr] | 地板；樓層\nfix | fix | [fɪks] | 修理；解決\ndrawer | draw/er | [drɔr] | 抽屜\nmop | mop | [mɑp] | 拖地；拖把\nstairs | stairs | [stɛrz] | 樓梯\nwipe | wipe | [waɪp] | 擦拭\nwindow | win/dow | [ˈwɪndoʊ] | 窗戶\ndry | dry | [draɪ] | （使）乾燥；乾的\nhang | hang | [hæŋ] | 吊；掛\nclothes | clothes | [kloʊðz] | 衣服\n# Reading\nmove | move | [muv] | 搬遷；移動\ncity | city | [ˈsɪti] | 城市\ndream | dream | [drim] | 夢；夢想（的）\nalmost | al/most | [ˈɔlˌmoʊst] | 幾乎\nfall asleep | fall/asleep | [fɔl əsˈlip] | 睡著\nscared | scared | [skɛrd] | 害怕的\nproblem | prob/lem | [ˈprɑbləm] | 問題\ntip | tip | [tɪp] | 訣竅\nhowever | how/ev/er | [ˌhaʊˈɛvər] | 然而\nnothing | noth/ing | [ˈnəθɪŋ] | 沒什麼；無事；無物\ncatch | catch | [kæʧ] | 捉；接\nthrough | through | [θru] | 穿越；從頭到尾\nfinally | fi/nal/ly | [ˈfaɪnəli] | 終於；最後\nsave | save | [seɪv] | 拯救\nterrible | ter/ri/ble | [ˈtɛrəbəl] | 糟糕的；可怕的","U4":"hope | hope | [hoʊp] | 希望\nfuture | fu/ture | [fˈjuʧər] | 未來（的）\nplan | plan | [plæn] | 規劃；計畫\nlawyer | law/yer | [ˈlɔjər] | 律師\njob | job | [ʤɑb] | 工作\nget butterflies in one's stomach | get/but/ter/flies/in/one's/stom/ach | [gɪt ˈbətərˌflaɪz ɪn wənz stomac] | 感到緊張\nworry | wor/ry | [ˈwəri] | 擔心\nkeep | keep | [kip] | 持續；保持\nidea | i/de/a | [aɪˈdiə] | 主意；想法\nright | right | [raɪt] | 權利\nput on | put/on | [pʊt ɔn] | 穿上\nreporter | re/porter | [rɪˈpɔrtər] | 記者\ninterview | in/ter/view | [ˈɪntərvˌju] | 採訪；面試\nmail carrier | mail/car/ri/er | [meɪl ˈkɛriər] | 郵差\ndentist | den/tist | [ˈdɛntɪst] | 牙醫\nfactory | fac/to/ry | [ˈfæktəri] | 工廠\nfisherman | fish/er/man | [fi ˈʃərmən] | 漁夫\nsecretary | sec/re/tary | [ˈsɛkrəˌtɛri] | 祕書\nboss | boss | [bɔs] | 老闆\nsalesman | sales/man | [ˈseɪlzmən] | 銷售員；業務員\nfarmer | farm/er | [ˈfɑrmər] | 農夫\ngrow | grow | [groʊ] | 種植；成長\nsoldier | sol/dier | [ˈsoʊlʤər] | 士兵\ncountry | coun/try | [ˈkəntri] | 國家\ntruck driver | truck/driv/er | [trək ˈdraɪvər] | 卡車司機\ndrive | drive | [draɪv] | 開（車）\n# Reading\nsuccessful | suc/cess/ful | [səkˈsɛsfəl] | 成功的\nfind | find | [faɪnd] | 找到；發現\ngrade | grade | [greɪd] | 年級\ndecide | de/cide | [ˌdɪˈsaɪd] | 決定\nbecome | be/come | [bɪˈkəm] | 成為\nrelative | rel/a/tive | [ˈrɛlətɪv] | 親戚\nbelieve | be/lieve | [bɪˈliv] | 相信\nact | act | [ækt] | 表演\nall over | all/over | [ɔl ˈoʊvər] | 遍及\nmake fun of | make/fun/of | [meɪk fən əv] | 取笑\ngive up | give/up | [gɪv əp] | 放棄","U5":"metro | met/ro | [ˈmɛˌtroʊ] | 捷運\nlost | lost | [lɔst] | 迷路的\nmap | map | [mæp] | 地圖\nask | ask | [æsk] | 請求；詢問\nExcuse me. | Ex/cuse/me. | [ɪkˈskjuz mi.] | （對不起）請問…\nstraight | straight | [streɪt] | 直地；直的\nturn left | turn/left | [tərn lɛft] | 向左轉\nalong | a/long | [əˈlɔŋ] | 沿著\nblock | block | [blɑk] | 街區\ncorner | cor/ner | [ˈkɔrnər] | 轉角；角落\nacross from | across/from | [əˈkrɔs frəm] | 在…的對面\nsupermarket | su/per/mar/ket | [ˈsupərˌmɑrkɪt] | 超市\nground | ground | [graʊnd] | 地面\nsir | sir | [sər] | 先生\non foot | on/foot | [ɔn fʊt] | 步行\ntake | take | [teɪk] | 搭乘（交通工具）\nby | by | [baɪ] | 搭乘；藉由…方式\nget off | get/off | [gɪt ɔf] | 下（車、飛機等）\nget | get | [gɪt] | 到達\nright | right | [raɪt] | 右邊（的）\nship | ship | [ʃɪp] | 輪船\ntaxi | taxi | [ˈtæksi] | 計程車\nbike | bike | [baɪk] | 單車\nmotorcycle | mo/tor/cy/cle | [ˈmoʊtərˌsaɪkəl] | 機車；摩托車\nscooter | scoot/er | [ˈskutər] | 機車\nbank | bank | [bæŋk] | 銀行；河岸\nfire station | fire/sta/tion | [faɪər ˈsteɪʃən] | 消防局\ntoy | toy | [tɔɪ] | 玩具\npost office | post/of/fice | [poʊst ˈɔfəs] | 郵局\nhospital | hos/pi/tal | [ˈhɑˌspɪtəl] | 醫院\npool | pool | [pul] | 水池\ngo jogging | go/jog/ging | [goʊ ˈʤɔgɪŋ] | 慢跑\ngo sailing | go/sail/ing | [goʊ ˈseɪlɪŋ] | 玩帆船；航行\ngo surfing | go/surf/ing | [goʊ ˈsərfɪŋ] | 衝浪\nfly | fly | [flaɪ] | 飛行；駕駛\nbus stop | bus/stop | [bəs stɑp] | 公車站\ngo biking | go/bik/ing | [goʊ ˈbaɪkɪŋ] | 騎單車\ngo shopping | go/shop/ping | [goʊ ˈʃɑpɪŋ] | 購物\n# Reading\nhit | hit | [hɪt] | 碰撞；打擊\nsound | sound | [saʊnd] | 聲音\nbell | bell | [bɛl] | 鐘；鈴\nexperience | ex/pe/ri/ence | [ɪkˈspɪriəns] | 經歷；經驗\nwonderful | won/der/ful | [ˈwəndərfəl] | 美好的\nplay | play | [pleɪ] | 戲劇\naround | a/round | [əraʊnd] | 大約","U6":"will | will | [wɪl] | 將\nugly | ug/ly | [ˈəgli] | 醜的\nsweater | sweat/er | [sˈwɛtər] | 毛衣\ntonight | to/night | [təˈnaɪt] | 今晚\nfunny | fun/ny | [ˈfəni] | 滑稽的\ncost | cost | [kɔst] | 價錢為；花費\nprice | price | [praɪs] | 價格\nspend | spend | [spɛnd] | 花費（時間、金錢）\nexpensive | ex/pen/sive | [ɪkˈspɛnsɪv] | 昂貴的\non sale | on/sale | [ɔn seɪl] | 特價中\npair | pair | [pɛr] | （一）雙；（一）對\ntotal | to/tal | [ˈtoʊtəl] | 總計（的）；全部（的）\npay | pay | [peɪ] | 付費；工資\nthousand | thou/sand | [ˈθaʊzənd] | 千\ntomorrow | to/mor/row | [təˈmɑˌroʊ] | 明天\nhigh | high | [haɪ] | 高的\nsave | save | [seɪv] | 節省\nwould like | would/like | [wʊd laɪk] | 想要\nchange | change | [ʧeɪnʤ] | 找零\ntake | take | [teɪk] | 花費（時間）\ndress | dress | [drɛs] | 打扮；洋裝\ncap | cap | [kæp] | （前有遮簷的）帽子\nshirt | shirt | [ʃərt] | 襯衫\nbelt | belt | [bɛlt] | 腰帶\njeans | jeans | [ʤinz] | 牛仔褲\nsock | sock | [sɑk] | 襪子\ntie | tie | [taɪ] | 領帶\npants | pants | [pænts] | 長褲\nshoe | shoe | [ʃu] | 鞋\nT-shirt | T/shirt | [ti -ʃərt] | 恤\nshorts | shorts | [ʃɔrts] | 短褲\nhat | hat | [hæt] | 帽子\ncoat | coat | [koʊt] | 外套\nskirt | skirt | [skərt] | 裙子\nglasses | glass/es | [ˈglæsɪz] | 眼鏡\nring | ring | [rɪŋ] | 戒指；環（狀物）\ntake off | take/off | [teɪk ɔf] | 脫下\n# Reading\nfast | fast | [fæst] | 快的；快地\nlow | low | [loʊ] | 低的\ncheap | cheap | [ʧip] | 便宜的\nwhat's more | what's/more | [wəts mɔr] | 而且\nmost | most | [moʊst] | 大部分的\nhurt | hurt | [hərt] | 傷害\ncome off | come/off | [kəm ɔf] | 從…脫落\nsecond | sec/ond | [ˈsɛkənd] | 秒"},"B5":{"U1":"yet | yet | [jɛt] | 還（沒）\nalready | al/ready | [ɔˈrɛdi] | 已經\ndiet | di/et | [daɪət] | 節食；飲食\nraise | raise | [reɪz] | 提高；舉起\nsince | since | [sɪns] | 自從\nphoto | pho/to | [ˈfoʊˌtoʊ] | 照片\ncrazy | craz/y | [ˈkreɪzi] | 荒唐的；瘋狂的\nas... as possible | as.../as/pos/si/ble | [ɛz... ɛz ˈpɑsəbəl] | 盡可能的…\nslim | slim | [slɪm] | 苗條的；微小的\ntype | type | [taɪp] | 類型\never | ev/er | [ˈɛvər] | 曾經\nhabit | hab/it | [ˈhæbət] | 習慣\ntake action | take/ac/tion | [teɪk ˈækʃən] | 採取行動\nbe all ears | be/all/ears | [bi ɔl ɪrz] | 洗耳恭聽\nat least | at/least | [æt list] | 至少\nYou got it. | You/got/it. | [ju gɑt ɪt.] | 沒錯\ngym | gym | [ʤɪm] | 健身房；體育館\nabroad | a/broad | [əˈbrɔd] | 到國外\ncheat | cheat | [ʧit] | 作弊；欺騙\ncopy | copy | [ˈkɑpi] | 抄襲；複製\nrace | race | [reɪs] | 速度競賽\nstay in shape | stay/in/shape | [steɪ ɪn ʃeɪp] | 保持健康\nkind | kind | [kaɪnd] | 種類\n# Reading\nletter | let/ter | [ˈlɛtər] | 信\nteenager | teenag/er | [ˈtiˌneɪʤər] | 青少年\nsenior high school | se/nior/high/school | [ˈsinjər haɪ skul] | 高中\nunderstand | un/der/stand | [ˌəndərˈstænd] | 瞭解\ndrum | drum | [drəm] | 鼓\njoy | joy | [ʤɔɪ] | 樂趣；喜悅\npop | pop | [pɑp] | 流行音樂\nlately | late/ly | [ˈleɪtli] | 最近\nangry | an/gry | [ˈæŋgri] | 生氣的\nserious | se/ri/ous | [ˈsɪriəs] | 嚴重的\ninterest | in/ter/est | [ˈɪntəˌrɛst] | 興趣；使感興趣\ngarbage | gar/bage | [ˈgɑrbɪʤ] | 垃圾\nunhappy | un/hap/py | [ənˈhæpi] | 不快樂的\nworried | wor/ried | [ˈwərid] | 擔心的\nwish | wish | [wɪʃ] | 祝福；願望\nenvelope | en/ve/lope | [ˈɛnvəˌloʊp] | 信封\nstamp | stamp | [stæmp] | 郵票\nstar | star | [stɑr] | 明星\ncall | call | [kɔl] | 稱呼\ntalk... into | talk.../in/to | [tɔk... ˈɪntu] | 說服（某人）做…","U2":"actor | ac/tor | [ˈæktər] | 演員\ntouch | touch | [təʧ] | 觸動；碰觸\nheart | heart | [hɑrt] | 心；心臟\nsurprise | sur/prise | [səˈpraɪz] | （使）驚訝\nbored | bored | [bɔrd] | 感到無聊的\nhard-working | hard/work/ing | [ˌhɑrdˈwərkɪŋ] | 勤奮的\nguess | guess | [gɛs] | 猜測\nseveral | sev/er/al | [ˈsɛvərəl] | 幾個的\nsurprised | sur/prised | [səˈpraɪzd] | 感到驚訝的\nexciting | ex/cit/ing | [ɪkˈsaɪtɪŋ] | 令人興奮的；刺激的\nghost | ghost | [goʊst] | 鬼\ncastle | cas/tle | [ˈkæsəl] | 城堡\nsurprising | sur/pris/ing | [səˈpraɪzɪŋ] | 令人驚訝的\ninterested | in/ter/est/ed | [ˈɪntəˌrɛstɪd] | 感興趣的\nboring | bor/ing | [ˈbɔrɪŋ] | 無聊的\ndownload | down/load | [ˈdaʊnˌloʊd] | 下載\nInternet | In/ter/net | [ˈɪntərˌnɛt] | 網路（ ）\nset | set | [sɛt] | 建立；樹立\nexcited | ex/cit/ed | [ɪkˈsaɪtɪd] | 感到興奮的\nticket | tick/et | [ˈtɪkɪt] | 票\nonline | on/line | [ˈɔnˌlaɪn] | 在網上；線上的\nproud | proud | [praʊd] | 自豪的；驕傲的\nI'll pass. | I'll/pass. | [aɪl pæs.] | 不用了\nbook | book | [bʊk] | 預訂；預約\nactress | ac/tress | [ˈæktrəs] | 女演員\ntowel | tow/el | [taʊəl] | 毛巾\ncomb | comb | [koʊm] | 梳子；梳理\nbat | bat | [bæt] | 蝙蝠\n# Reading\nlie | lie | [laɪ] | 謊言；說謊（現在分詞為\nfake | fake | [feɪk] | 假的；偽造的\nnewspaper | news/pa/per | [ˈnuzˌpeɪpər] | 報紙\nnobody | no/body | [ˈnoʊˌbɑˌdi] | 無人\nanybody | any/body | [ˈɛnibədi] | 任何人\npiece | piece | [pis] | （一）則；片；張\ndig | dig | [dɪg] | 挖掘；尋找\nsentence | sen/tence | [ˈsɛntəns] | 句子\nspell | spell | [spɛl] | 拼字\ntrick | trick | [trɪk] | 騙；詭計\npost | post | [poʊst] | 貼文；張貼\nright away | right/away | [raɪt əˈweɪ] | 立刻；馬上\nhit | hit | [hɪt] | 點擊數\ntell | tell | [tɛl] | 分辨","U3":"senior center | se/nior/cen/ter | [ˈsinjər ˈsɛnər] | 樂齡中心\npleasure | plea/sure | [ˈplɛʒər] | 愉快；榮幸\nattack | at/tack | [əˈtæk] | 攻擊\ntoe | toe | [toʊ] | 腳趾\nbridge | bridge | [brɪʤ] | 橋\ndrop | drop | [drɔp] | （使）落下；丟下\nsmoke | smoke | [smoʊk] | 煙霧；抽菸\npuppy | pup/py | [ˈpəpi] | 幼犬\nmiddle | mid/dle | [ˈmɪdəl] | 中間\ncarry | car/ry | [ˈkɛri] | 攜帶\nnote | note | [noʊt] | 紙條\nwallet | wal/let | [ˈwɔlət] | 錢包\npocket | pock/et | [ˈpɑkət] | 口袋\npray | pray | [preɪ] | 祈求；祈禱\nblow up | blow/up | [bloʊ əp] | 爆炸\nlie | lie | [laɪ] | 躺；臥（現在分詞為\nin time | in/time | [ɪn taɪm] | 及時\narea | area | [ˈɛriə] | 區域\nglue | glue | [glu] | 膠水\npaste | paste | [peɪst] | 黏貼\nyard | yard | [jɑrd] | 庭院\npipe | pipe | [paɪp] | 水管\nbench | bench | [bɛnʧ] | 長凳；長椅\nbadminton | bad/minton | [ˈbædˌmɪntən] | 羽毛球\ntennis | ten/nis | [ˈtɛnɪs] | 網球\nslide | slide | [slaɪd] | 滑梯\nseesaw | see/saw | [ˈsiˌsɔ] | 翹翹板\nswing | swing | [swɪŋ] | 鞦韆\ntool | tool | [tul] | 工具\npot | pot | [pɑt] | 盆；鍋\nseed | seed | [sid] | 種子\nbasket | bas/ket | [ˈbæskət] | 籃子\nbake | bake | [beɪk] | 烘焙\npack | pack | [pæk] | （一）副；包\nfan | fan | [fæn] | 風扇\n# Reading\nnotice | no/tice | [ˈnoʊtɪs] | 注意到；告示\ngas | gas | [gæs] | （化學、天然）氣體；汽油\nmodern | mod/ern | [ˈmɑdərn] | 現代的\nprogram | pro/gram | [ˈproʊˌgræm] | 計畫；節目\nside | side | [saɪd] | 側邊；面\nsomewhere | some/where | [ˈsəmˌwɛr] | 在某處\nmissing | miss/ing | [ˈmɪsɪŋ] | 失蹤的；找不到的\ncheer... up | cheer.../up | [ʧɪr... əp] | 使…振作起來","U4":"gate | gate | [geɪt] | 大門\nfile | file | [faɪl] | 檔案\nquiz | quiz | [kwɪz] | 小考\nblackboard | black/board | [ˈblækˌbɔrd] | 黑板\nchalk | chalk | [ʧɔk] | 粉筆\nscreen | screen | [skrin] | 螢幕\nerror | er/ror | [ˈɛrər] | 錯誤\nbutton | but/ton | [ˈbətən] | 按鈕；鈕扣\nenter | en/ter | [ˈɛnər] | 輸入；進入\nwake word | wake/word | [weɪk wərd] | 喚醒字詞\nwhether | wheth/er | [ˈwɛðər] | 是否\nlist | list | [lɪst] | 清單；列出\nhoney | hon/ey | [ˈhəni] | 親愛的（用於稱呼）\nsave | save | [seɪv] | 儲存\nthrough | through | [θru] | 透過；憑藉\nif | if | [ɪf] | 是否\nnot... anymore | not.../any/more | [nɑt... ˌɛniˈmɔr] | 不再…\nvoice assistant | voice/as/sis/tant | [vɔɪs əˈsɪstənt] | 語音助理\nmachine | ma/chine | [məˈʃin] | 機器\ndozen | doz/en | [ˈdəzən] | （一）打\nboil | boil | [bɔɪl] | 煮沸\nrefrigerator | re/frig/er/a/tor | [rɪˈfrɪʤərˌeɪtər] | 冰箱\nupload | up/load | [ˈəˌploʊd] | 上傳\ne-mail | e/mail | [ˈiˌmeɪl] | 電子郵件\nkey | key | [ki] | 鑰匙\nthe cloud | the/cloud | [ðə klaʊd] | 雲端\ntype | type | [taɪp] | 打字\n# Reading\nrise | rise | [raɪz] | 興起；上升\ncollect | col/lect | [kəˈlɛkt] | 收集\nlamp | lamp | [læmp] | 檯燈\ncouch | couch | [kaʊʧ] | 沙發\nheat | heat | [hit] | 加熱；熱\ncellphone | cell/phone | [ˈsɛlfoʊn] | 手機\ncorrect | cor/rect | [kərˈɛkt] | 更正；正確的\nappear | ap/pear | [əˈpɪr] | 出現\nplace | place | [pleɪs] | 放置\nfat | fat | [fæt] | 脂肪\npoint | point | [pɔɪnt] | 對準；指","U5":"arrive | ar/rive | [əraɪv] | 抵達\nplanet | plan/et | [ˈplænət] | 行星\nline | line | [laɪn] | 隊伍；線\ngod | god | [gɑd] | 神\noutside | out/side | [ˈaʊtˈsaɪd] | 在外面；外面\nrestroom | re/stroom | [ˈrɛˌstrum] | 洗手間\nbath | bath | [bæθ] | 沐浴\nuniform | uni/form | [ˈjunəˌfɔrm] | 制服\ntail | tail | [teɪl] | 尾巴\nbottom | bot/tom | [ˈbɑtəm] | 臀部；底部\nmain | main | [meɪn] | 主要的\nbelong | be/long | [bɪˈlɔŋ] | 屬於\ngo on | go/on | [goʊ ɔn] | 發生\nlead | lead | [lɛd] | 通往\nplay | play | [pleɪ] | 扮演\nsquare | square | [skwɛr] | 正方形的；正方形\nstring | string | [strɪŋ] | 串；線\nround | round | [raʊnd] | 圓形的\ndot | dot | [dɑt] | 圓點\npin | pin | [pɪn] | 飾針；胸針\nneighbor | neigh/bor | [ˈneɪbər] | 鄰居\nforeigner | for/eign/er | [ˈfɔrənər] | 外國人\nhobby | hob/by | [ˈhɑbi] | 嗜好\nbusinessman | busi/ness/man | [ˈbɪznɪsˌmæn] | 商人\nbusiness | busi/ness | [ˈbɪznɪs] | 生意；事業\nshopkeeper | shop/keep/er | [ˈʃɑpˌkipər] | 店主\ndictionary | dic/tio/nary | [ˈdɪkʃəˌnɛri] | 字典\nworkbook | work/book | [workbook] | 作業本\nbow | bow | [boʊ] | 蝴蝶結\nlight | light | [laɪt] | 輕的\nrun | run | [rən] | 經營\nexercise | ex/er/cise | [ˈɛksərˌsaɪz] | 習題；練習\n# Reading\nborn | born | [bɔrn] | 出生的\nbe no stranger to | be/no/stranger/to | [bi noʊ ˈstreɪnʤər tɪ] | 對…不陌生\nprize | prize | [praɪz] | 獎\ntopic | top/ic | [ˈtɑpɪk] | 主題\nknowledge | knowl/edge | [ˈnɑlɪʤ] | 知識\npublic | pub/lic | [ˈpəblɪk] | 公眾（的）\ntake over | take/over | [teɪk ˈoʊvər] | 接管\nkey | key | [ki] | 關鍵（的）","U6":"knock | knock | [nɑk] | 敲\napartment | apart/ment | [əˈpɑrtmənt] | 公寓\nglad | glad | [glæd] | 高興的\ntown | town | [taʊn] | 城鎮\npolite | po/lite | [pəˈlaɪt] | 有禮貌的\nseat | seat | [sit] | 座位\nbeside | be/side | [ˌbiˈsaɪd] | 在…旁邊\nexcept | ex/cept | [ɪkˈsɛpt] | 除了\nblank | blank | [blæŋk] | 空白（的）\npresent | pres/ent | [ˈprɛzənt] | 禮物\ninvite | in/vite | [ˌɪnˈvaɪt] | 邀請\nperhaps | per/haps | [pərˈhæps] | 或許\nkiss | kiss | [kɪs] | 吻\nsidewalk | side/walk | [ˈsaɪdˌwɔk] | 人行道\nused to | used/to | [juzd tɪ] | 過去時常…\nhand | hand | [hænd] | 遞給\nthrow up | throw/up | [θroʊ əp] | 嘔吐\nserious | se/ri/ous | [ˈsɪriəs] | 認真的\nblind | blind | [blaɪnd] | 盲的\nApril Fools' Day | A/pril/Fools'/Day | [ˈeɪprəl fulz' deɪ] | 愚人節\ntape | tape | [teɪp] | 用膠帶黏貼；膠帶\npaper | pa/per | [ˈpeɪpər] | 紙\njoke | joke | [ʤoʊk] | 玩笑；笑話\nrich | rich | [rɪʧ] | 豐富的；富有的\nvisitor | vis/i/tor | [ˈvɪzɪtər] | 遊客；參觀者\n# Reading\nmark | mark | [mɑrk] | 標記\nshout | shout | [ʃaʊt] | 喊叫\nlazy Susan | la/zy/Su/san | [ˈleɪzi ˈsuzən] | 餐桌轉盤\nclap | clap | [klæp] | 拍；鼓掌\ngo ahead | go/ahead | [goʊ əˈhɛd] | 請便；開始做\nquite | quite | [kwaɪt] | 相當\nfry | fry | [fraɪ] | 油炸；油煎"}};
+
+        // Current State
+        let currentBook = "B1";
+        let activeUnitData = bookData[currentBook];
+        let currentUnit = "U6";
+        let currentVocabType = "all";
+        let currentStudentId = ""; // To store student name/ID
+        let vocabList = [];
+        let t1CurrentIndex = 0;
+        let t5CurrentIndex = 0;
+        let t6CurrentIndex = 0;
+        let t5SpeechLevel = 1; 
+        let t5Processing = false;
+        let t5FailCount = 0; // 新增：紀錄口說失敗次數
+        
+        // Speech Recognition Setup
+        let recognition;
+        let isListening = false;
+
+        const demoSuggestions = {
+            // Unit 6
+            "pass": "諧音：'Pass' -> 怕死。因為怕死(考試死掉)，所以一定要通過(pass)。",
+            "throw": "動作聯想：投球時手會劃出一個弧線，像 r 的形狀。",
+            "point": "聯想：PowerPoint (PPT) 就是重點(Point)簡報。",
+            "win": "圖像：Win 勝利時，手指會比出 W 的形狀 (V sign)。",
+            "until": "拆字：Un (不) + til (直到)。直到...為止。",
+            "member": "拆字：Mem (記憶) + ber (人)。能被記住的人就是成員。",
+            "fail": "諧音：'Fail' -> 廢喔。考試失敗(fail)了覺得自己很廢。",
+            "test": "聯想：Con-test (比賽) 也是一種 Test (考試)。",
+            "afraid": "語境：I am afraid of... (我害怕...)，常跟 of 連用。",
+            "forget": "拆字：For (為了) + get (得到)。為了得到新的，所以忘記(forget)舊的。",
+            "fresh": "聯想：Fresh (新鮮) 的 Fish (魚)。",
+            "begin": "用法：Begin -> Began (過去式)。",
+            "meeting": "字根：Meet (遇見) + ing -> 大家遇見在一起就是開會。",
+            "excuse": "諧音：'Excuse' -> 益可膚。擦了益可膚就有藉口(excuse)不洗澡？",
+            "grade": "聯想：Up-grade (升級) -> 成績(grade)變好就是升級。",
+            "simple": "對比：Simple (簡單) vs Hard (困難)。",
+            "mistake": "拆字：Mis (錯誤) + take (拿)。拿錯了就是犯錯(mistake)。",
+            "angle": "聯想：Angle (角度) vs Angel (天使)。天使(Angel)有光環，角度(Angle)有稜角(le在後)。",
+            "allow": "用法：Allow sb to do sth (允許某人做某事)。",
+            "laugh": "發音：gh 發 [f] 的音，像大笑時氣流出來的聲音。",
+            "honest": "發音：H 不發音。誠實的人不說謊(H)。",
+            "push": "動作：門上常寫 Push (推) / Pull (拉)。",
+            "excellent": "聯想：Excel (試算表) 軟體很優秀(excellent)。",
+            "matter": "口語：What's the matter? (發生什麼事/有什麼問題？)",
+            "picture": "拆字：Pic (照片) + ture。",
+            
+            // Common words
+            "foreign": "拆字：For + eign (發音像 rain)。",
+            "delicious": "口訣：De-li-cious (底-里-許-斯) -> 東西好吃。",
+            "convenient": "拆字：Con-ven-ient。方便的。",
+            "dangerous": "字尾：-ous 通常是形容詞。Danger (危險) + ous。",
+            "business": "拆字：Busy (忙碌) + ness (名詞)。忙碌的事情就是生意。",
+            "traffic": "諧音：'Traffic' -> 吹飛客。交通(traffic)很亂，把客人吹飛了。",
+            "popular": "聯想：Pop music (流行音樂) 很 Popular (受歡迎)。",
+            "expensive": "拆字：Ex (向外) + pens (花費) + ive。花很多錢就是昂貴。",
+            "experience": "拆字：Ex-per-i-ence。",
+            "actually": "拆字：Act (行動) + ual + ly。實際上的行動。"
+        };
+
+        const genericSuggestions = [
+            "諧音法：試著用中文唸唸看，有沒有像什麼好笑的句子？",
+            "字中字：找找看這個單字裡面有沒有你已經認識的小字？(例如：Together -> To + get + her)",
+            "拆字法：把長單字拆成幾個音節，一段一段記 (例如：In-for-ma-tion)。",
+            "圖像法：閉上眼睛，想像這個單字代表的畫面，越誇張越好記！",
+            "相反詞：記住它的相反詞 (例如：Hot <-> Cold)，一次記兩個！",
+            "造句法：試著用這個字造一個跟自己有關的句子。",
+            "字首字根：查查看這個字的字首(Prefix)或字根(Root)是什麼意思？"
+        ];
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            const today = new Date();
+            document.getElementById('report-date').innerText = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
+            
+            // Initialize Speech Recognition
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRec();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = function(event) {
+                    const result = event.results[0][0].transcript;
+                    checkSpeechResult(result);
+                };
+                recognition.onerror = function(event) {
+                    stopListeningUI();
+                    
+                    // Add handling for 'aborted' error
+                    if (event.error === 'aborted') {
+                        console.log("Speech recognition was manually stopped.");
+                    } else if (event.error === 'no-speech') {
+                        console.log("Speech recognition timeout: No speech detected.");
+                        document.getElementById('t5-sub-text').innerText = "未偵測到聲音，請再按一次麥克風。";
+                    } else if(event.error === 'not-allowed') {
+                         console.error("Speech recognition error", event.error);
+                        document.getElementById('t5-sub-text').innerText = "請允許麥克風存取權限。";
+                    } else {
+                         console.error("Speech recognition error", event.error);
+                        document.getElementById('t5-sub-text').innerText = "辨識失敗，請再試一次！";
                     }
                 };
-                reader.readAsText(fileObj);
-                event.target.value = ''; // Reset input
-            };
-
-            // --- AI 檢查 ---
-            const analyzeAssociationsWithAI = (index) => {
-                if (!apiKey) {
-                    alert("請點擊右上角的「🔑 API Key」設定您的 Google Gemini API Key 才能使用 AI 功能。");
-                    setShowKeyInput(true);
-                    return;
-                }
-
-                const word = words[index];
-                const target = word.targetWord.trim();
-                
-                if (!target) { alert("請先輸入主題單字 (Target Word)"); return; }
-
-                const basicStatuses = [...word.associationStatus];
-                const assocsToCheck = [];
-                const seenValues = new Set();
-                
-                word.associations.forEach((assoc, i) => {
-                    const val = assoc.trim().toLowerCase();
-                    const targetLower = target.toLowerCase();
-                    basicStatuses[i] = null;
-                    if (!val) { basicStatuses[i] = { type: 'error', msg: '未填寫' }; return; }
-                    if (val === targetLower) { basicStatuses[i] = { type: 'error', msg: '請延伸成語塊' }; return; }
-                    if (seenValues.has(val)) { basicStatuses[i] = { type: 'error', msg: '語塊已重複' }; return; }
-                    seenValues.add(val);
-                    assocsToCheck.push({ text: assoc, index: i });
-                });
-
-                if (assocsToCheck.length === 0) {
-                    updateWord(index, { associationStatus: basicStatuses });
-                    return;
-                }
-
-                updateWord(index, { isAnalyzing: true, associationStatus: basicStatuses });
-
-                const promptText = `
-                    Role: Strict English Teacher specializing in collocations and lexical chunks.
-                    Task: Evaluate if the following phrases are natural English "Word Chunks" (Collocations) containing the Target Word.
-                    Target Word: "${target}"
-                    Phrases to check: ${JSON.stringify(assocsToCheck.map(a => a.text))}
-                    Rules:
-                    1. Phrase MUST contain Target Word.
-                    2. Phrase MUST be a natural collocation.
-                    3. Return JSON array of objects: { "valid": boolean, "msg": string (Max 15 chars, Traditional Chinese) }.
-                    Output ONLY raw JSON.
-                `;
-
-                fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(errData => {
-                            throw new Error(errData.error?.message || response.statusText);
-                        });
+                recognition.onend = function() {
+                    // Check if it's currently marked as listening before stopping UI
+                    if(isListening){
+                        stopListeningUI();
                     }
-                    return response.json();
-                })
-                .then(data => {
-                    const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (resultText) {
-                        const cleanJson = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
-                        try {
-                            const analysisResults = JSON.parse(cleanJson);
-                            const finalStatuses = [...basicStatuses];
-                            
-                            analysisResults.forEach((res, idx) => {
-                                if (assocsToCheck[idx]) {
-                                    const originalIndex = assocsToCheck[idx].index;
-                                    if (res.valid) {
-                                        finalStatuses[originalIndex] = { type: 'success', msg: res.msg || '道地語塊' };
-                                    } else {
-                                        finalStatuses[originalIndex] = { type: 'warning', msg: res.msg || '建議修正搭配' };
-                                    }
-                                }
-                            });
-                            updateWord(index, { associationStatus: finalStatuses, isAnalyzing: false });
-                        } catch (parseError) {
-                            throw new Error("AI 回傳格式錯誤 (JSON Parse Failed)");
+                };
+            } else {
+                document.getElementById('browser-warning').classList.remove('hidden');
+            }
+
+            // Init PDF.js Worker
+            if (window.pdfjsLib) {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                const pdfUpload = document.getElementById('pdfUpload');
+                if (pdfUpload) {
+                    pdfUpload.addEventListener('change', handlePDFUpload);
+                }
+            }
+
+            loadUnitData('U6');
+            
+            // Add Enter key listener for Task 6
+            document.getElementById('t6-input').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    checkSpelling();
+                }
+            });
+        };
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function toggleTeacherMode() {
+            const zone = document.getElementById('teacher-edit-zone');
+            zone.classList.toggle('hidden');
+            if(!zone.classList.contains('hidden')) {
+                document.getElementById('teacherInput').value = activeUnitData[currentUnit];
+            }
+        }
+
+        function saveTeacherData() {
+            const newData = document.getElementById('teacherInput').value;
+            activeUnitData[currentUnit] = newData;
+            loadUnitData(currentUnit);
+            toggleTeacherMode();
+            alert("單字已更新！(注意：此更新僅限本次使用，若要在 Google Site 永久生效，請複製文字並修改原始碼中的 unitData)");
+        }
+
+        async function handlePDFUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('pdf-loading').classList.remove('hidden');
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = '';
+                
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    
+                    let lastY = -1;
+                    let textItems = [];
+                    // 根據垂直座標 (Y) 與水平座標 (X) 排序文字，還原閱讀順序
+                    const items = textContent.items.sort((a, b) => {
+                        if (Math.abs(b.transform[5] - a.transform[5]) > 5) {
+                            return b.transform[5] - a.transform[5]; // 由上到下
                         }
-                    } else {
-                        throw new Error("AI 未回傳任何文字");
-                    }
-                })
-                .catch(error => {
-                    console.error("AI Check Failed:", error);
-                    const fallbackStatuses = [...basicStatuses];
-                    assocsToCheck.forEach(({ text, index: i }) => {
-                        fallbackStatuses[i] = { type: 'neutral', msg: '連線失敗(僅基本檢查)' };
+                        return a.transform[4] - b.transform[4]; // 由左到右
                     });
-                    updateWord(index, { associationStatus: fallbackStatuses, isAnalyzing: false });
-                    alert(`AI 檢查失敗！\n\n可能原因：\n1. API Key 無效或額度已滿\n2. 網路連線問題\n\n錯誤訊息: ${error.message}`);
-                });
-            };
 
-            const startListening = (index) => {
-                const targetWord = words[index].targetWord;
-                if (!targetWord.trim()) { alert("請先輸入單字"); return; }
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!SpeechRecognition) { alert("請使用 Chrome/Edge 瀏覽器"); return; }
-                if (listeningIndex === index) { stopListening(); return; }
-                if (listeningIndex !== null) recognitionRef.current?.stop();
-
-                try {
-                    const recognition = new SpeechRecognition();
-                    recognition.lang = 'en-US'; 
-                    recognition.continuous = false;
-                    recognition.interimResults = false;
-                    recognition.onstart = () => {
-                        setListeningIndex(index);
-                        updateWord(index, { speechStatus: 'listening', checkerName: '聆聽中...' });
-                    };
-                    recognition.onresult = (event) => {
-                        if (event.results && event.results[0]) {
-                            const transcript = event.results[0][0].transcript.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-                            const target = targetWord.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-                            if (transcript.includes(target)) updateWord(index, { checked: true, checkerName: 'AI 小助教 (Pass)', speechStatus: 'success' });
-                            else updateWord(index, { checked: false, checkerName: `聽成: ${transcript}`, speechStatus: 'error' });
+                    for (const item of items) {
+                        if (lastY !== -1 && Math.abs(lastY - item.transform[5]) > 5) {
+                            textItems.push('\n');
                         }
-                    };
-                    recognition.onerror = (e) => {
-                        let msg = '辨識失敗';
-                        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-                            msg = '權限被拒';
-                            alert("❌ 麥克風權限被阻擋\n\n請允許瀏覽器使用麥克風權限。");
-                        }
-                        updateWord(index, { speechStatus: 'error', checkerName: msg });
-                        setListeningIndex(null);
-                    };
-                    recognition.onend = () => setListeningIndex(null);
-                    recognitionRef.current = recognition;
-                    recognition.start();
-                } catch (e) { alert("無法啟動麥克風"); }
-            };
-
-            const stopListening = () => recognitionRef.current?.stop();
-            const handleInfoChange = (e) => setStudentInfo(prev => ({ ...prev, [e.target.name]: e.target.value }));
-            const handleWordChange = (index, field, value) => {
-                let updates = { [field]: value };
-                if (field === 'checked') { updates.speechStatus = value ? 'success' : 'idle'; updates.checkerName = value ? '手動確認' : ''; }
-                if (field === 'targetWord') updates.associationStatus = [null, null, null, null, null];
-                updateWord(index, updates);
-            };
-            const handleAssociationChange = (wIdx, aIdx, val) => {
-                const newWords = [...words];
-                newWords[wIdx].associations[aIdx] = val;
-                newWords[wIdx].associationStatus[aIdx] = null;
-                setWords(newWords);
-            };
-            const handleClearAll = () => {
-                if (confirm('確定重置？這將清除目前所有內容。')) {
-                    setWords(Array(15).fill(null).map(() => ({ ...initialWordState })));
-                    setStudentInfo(p => ({ ...p, unit: 'U1' }));
-                    try { localStorage.removeItem('vocabLinkerData'); } catch(e){}
+                        textItems.push(item.str);
+                        lastY = item.transform[5];
+                    }
+                    fullText += textItems.join(' ') + '\n';
                 }
+
+                parseImportedText(fullText);
+                
+            } catch (error) {
+                console.error(error);
+                alert("PDF 解析失敗，請確定檔案沒有加密或損毀。\n" + error.message);
+            } finally {
+                document.getElementById('pdf-loading').classList.add('hidden');
+                e.target.value = ''; // 重置 file input
+            }
+        }
+
+        function parseImportedText(text) {
+            const lines = text.split('\n');
+            let currentParseUnit = document.getElementById('unitSelector').value; 
+            let parsedData = { ...activeUnitData }; 
+            let currentBuffer = [];
+            const foundUnits = new Set();
+            let hasValidData = false;
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+
+                // 偵測單元 (例如 "Unit 1", "UNIT 2")
+                const unitMatch = trimmed.match(/^Unit\s*(\d+)/i);
+                if (unitMatch) {
+                    if (currentBuffer.length > 0 && hasValidData) {
+                        parsedData[currentParseUnit] = currentBuffer.join('\n');
+                    }
+                    const unitNum = unitMatch[1];
+                    currentParseUnit = 'U' + unitNum;
+                    
+                    if(!parsedData[currentParseUnit]) parsedData[currentParseUnit] = "";
+                    
+                    currentBuffer = [];
+                    foundUnits.add(currentParseUnit);
+                    hasValidData = false;
+                    return;
+                }
+
+                // 偵測範圍標記
+                if (trimmed.toLowerCase() === '# reading' || trimmed.toLowerCase() === '# dialogue') {
+                    currentBuffer.push(trimmed);
+                    return;
+                }
+
+                // 若單字間有大量連續空白 (大於等於3個空白)，自動取代為 | 符號以符合系統格式
+                let processedLine = trimmed;
+                if (!processedLine.includes('|')) {
+                    processedLine = processedLine.replace(/\s{3,}/g, ' | ');
+                }
+
+                // 判斷是否為合格的單字列或標記列
+                if (processedLine.includes('|') || processedLine.startsWith('#')) {
+                     currentBuffer.push(processedLine);
+                     hasValidData = true;
+                     foundUnits.add(currentParseUnit);
+                }
+            });
+
+            // 儲存最後緩衝區中的單元
+            if (currentBuffer.length > 0 && hasValidData) {
+                parsedData[currentParseUnit] = currentBuffer.join('\n');
+            }
+
+            if (foundUnits.size > 0) {
+                // 將解析後的資料覆寫進全域變數
+                Object.keys(parsedData).forEach(k => {
+                    activeUnitData[k] = parsedData[k];
+                });
+                
+                // 動態增加不存在的 Unit 選項到下拉選單
+                const selector = document.getElementById('unitSelector');
+                Array.from(foundUnits).forEach(u => {
+                    let exists = Array.from(selector.options).some(opt => opt.value === u);
+                    if(!exists) {
+                        const opt = document.createElement('option');
+                        opt.value = u;
+                        opt.text = 'Unit ' + u.replace('U', '');
+                        selector.appendChild(opt);
+                    }
+                });
+
+                alert("成功從 PDF 擷取單字！\n偵測到單元：" + Array.from(foundUnits).join(', ') + "\n請在下方文字方塊檢查格式，確認無誤後點擊「儲存並更新」。");
+                selector.value = Array.from(foundUnits)[0];
+                document.getElementById('teacherInput').value = activeUnitData[selector.value];
+            } else {
+                // 若格式太亂無法自動分類，則純文字貼上讓老師手動處理
+                document.getElementById('teacherInput').value += '\n' + text;
+                alert("未能自動偵測到標準的單字格式或 Unit 標籤。\n已將擷取的原始文字附加至文字方塊中，請手動調整排版。");
+            }
+        }
+
+        function changeBook() {
+            currentBook = document.getElementById('bookSelector').value;
+            activeUnitData = bookData[currentBook];
+            loadUnitData(document.getElementById('unitSelector').value);
+        }
+
+        function changeUnit() {
+            const selector = document.getElementById('unitSelector');
+            const unit = selector.value;
+            loadUnitData(unit);
+        }
+
+        function changeVocabType(type) {
+            currentVocabType = type;
+            
+            // Update UI buttons
+            document.querySelectorAll('.vocab-type-btn').forEach(btn => {
+                if(btn.dataset.type === type) {
+                    btn.classList.add('bg-orange-100', 'border-orange-400', 'text-orange-700');
+                } else {
+                    btn.classList.remove('bg-orange-100', 'border-orange-400', 'text-orange-700');
+                }
+            });
+
+            // Reload data
+            loadUnitData(currentUnit);
+        }
+
+        function getStorageKey() {
+            return `VA_Data_${currentStudentId}_${currentBook}_${currentUnit}`;
+        }
+
+        function saveProgress() {
+            if (!currentStudentId) return;
+            // Save essential fields that represent progress
+            const dataToSave = vocabList.map(item => ({
+                word: item.word,
+                status: item.status,
+                t1Completed: item.t1Completed,
+                passedLevel1: item.passedLevel1,
+                passedLevel2: item.passedLevel2,
+                passedLevel3: item.passedLevel3,
+                passedLevel4: item.passedLevel4,
+                spellingCompleted: item.spellingCompleted,
+                t5Forced: item.t5Forced
+            }));
+            safeSetItem(getStorageKey(), JSON.stringify(dataToSave));
+            console.log("Progress saved for " + currentStudentId);
+        }
+
+        function loadProgress() {
+            if (!currentStudentId) return;
+            const savedJson = safeGetItem(getStorageKey());
+            if (savedJson) {
+                const savedData = JSON.parse(savedJson);
+                // Merge saved data into current vocabList based on word matching
+                vocabList.forEach(item => {
+                    const savedItem = savedData.find(s => s.word === item.word);
+                    if (savedItem) {
+                        item.status = savedItem.status || 'green';
+                        item.t1Completed = savedItem.t1Completed || false;
+                        item.passedLevel1 = savedItem.passedLevel1 || false;
+                        item.passedLevel2 = savedItem.passedLevel2 || false;
+                        item.passedLevel3 = savedItem.passedLevel3 || false;
+                        item.passedLevel4 = savedItem.passedLevel4 || false;
+                        item.spellingCompleted = savedItem.spellingCompleted || false;
+                        item.t5Forced = savedItem.t5Forced || false;
+                    }
+                });
+                console.log("Progress loaded for " + currentStudentId);
+                
+                // 重置指標確保從頭開始掃描未完成項目 (Reset indices to scan for uncompleted)
+                t1CurrentIndex = 0;
+                t5CurrentIndex = 0;
+                t6CurrentIndex = 0;
+
+                // Re-render UI to reflect loaded state
+                updateT1Display(); 
+                renderTask3();
+                renderRescueStation();
+                updateT6Display();
+            }
+        }
+
+        function clearStudentData() {
+            document.getElementById('studentNameInput').value = '';
+            currentStudentId = '';
+            document.getElementById('header-student-name').innerText = "未登入";
+            alert("已登出 / 清除輸入欄位。\nLogged out / Field cleared.");
+            loadUnitData(currentUnit); 
+        }
+
+        function loadUnitData(unit) {
+            currentUnit = unit;
+            document.getElementById('unitSelector').value = unit;
+            document.getElementById('header-unit-display').innerText = document.getElementById('unitSelector').options[document.getElementById('unitSelector').selectedIndex].text;
+            
+            parseData(activeUnitData[unit]);
+
+            // If user is already logged in, reload their progress for this new unit
+            if(currentStudentId) {
+                loadProgress();
+            }
+            
+            const previewList = document.getElementById('vocab-preview-list');
+            previewList.innerHTML = '';
+            
+            // Update count
+            document.getElementById('preview-count').innerText = `${vocabList.length} words`;
+
+            vocabList.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center bg-white p-3 rounded shadow-sm border border-gray-100';
+                li.innerHTML = `<span class="font-bold text-gray-700">${item.word}</span> <span class="text-sm text-gray-500">${item.meaning}</span>`;
+                previewList.appendChild(li);
+            });
+        }
+
+        function parseData(raw) {
+            if (!raw) return;
+            const lines = raw.split('\n');
+            vocabList = [];
+            
+            // Default is dialogue if not specified
+            let currentSection = 'dialogue'; 
+
+            lines.forEach((line, index) => {
+                const trimmedLine = line.trim();
+                if(!trimmedLine) return;
+
+                // Check for markers
+                if (trimmedLine.startsWith('# Reading')) {
+                    currentSection = 'reading';
+                    return;
+                } else if (trimmedLine.startsWith('# Dialogue')) {
+                    currentSection = 'dialogue';
+                    return;
+                }
+
+                // Filter logic
+                if (currentVocabType !== 'all' && currentVocabType !== currentSection) {
+                    return;
+                }
+
+                const parts = trimmedLine.split('|').map(s => s.trim());
+                if (parts.length >= 4) {
+                    vocabList.push({
+                        id: vocabList.length, // Use array length as unique ID for current session
+                        word: parts[0],
+                        answer: parts[1], 
+                        ipa: parts[2],
+                        meaning: parts[3],
+                        syllableCount: parts[1].includes('/') ? parts[1].split('/').length : 1,
+                        status: 'green',
+                        passedLevel1: false,
+                        passedLevel2: false,
+                        passedLevel3: false,
+                        passedLevel4: false,
+                        spellingCompleted: false,
+                        t1Completed: false,
+                        t5Forced: false,
+                        category: currentSection // Store category
+                    });
+                }
+            });
+            
+            // 將單字陣列亂數打亂 (Shuffle array for random order)
+            for (let i = vocabList.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [vocabList[i], vocabList[j]] = [vocabList[j], vocabList[i]];
+            }
+            
+            initTask1();
+            initTask6(); 
+            renderAllTasks();
+        }
+
+        function handleNameEnter(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const name = e.target.value.trim();
+                if (name) {
+                    currentStudentId = name;
+                    document.getElementById('header-student-name').innerText = `已登入 (${name})`;
+                    document.getElementById('report-student-name').innerText = name;
+                    loadProgress();
+                    e.target.blur(); // 取消輸入框焦點，表示輸入完成
+                } else {
+                    alert("請輸入姓名才能登入喔！\nPlease enter your name.");
+                }
+            }
+        }
+
+        function startMission() {
+            // New Login Logic
+            const nameInput = document.getElementById('studentNameInput');
+            const name = nameInput.value.trim();
+            
+            if (!name && !currentStudentId) {
+                alert("請先輸入姓名才能開始任務喔！\nPlease enter your name to start.");
+                nameInput.focus();
+                return;
+            }
+
+            if (name && name !== currentStudentId) {
+                currentStudentId = name;
+                document.getElementById('header-student-name').innerText = `已登入 (${name})`;
+                document.getElementById('report-student-name').innerText = name;
+                loadProgress(); // Load saved data if exists
+            }
+            
+            switchTab('task1');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('nav-' + tabId).classList.add('active');
+
+            if(window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('sidebar-overlay').classList.add('hidden');
+            }
+
+            if(tabId === 'task4') renderRescueStation();
+            if(tabId === 'task7') generateReport(); 
+            if(tabId === 'task6') updateT6Display(); 
+            
+            if(tabId === 'task5') {
+                 if(document.getElementById('t5-game-area').classList.contains('hidden') && 
+                    document.getElementById('t5-level-completion').classList.contains('hidden') &&
+                    document.getElementById('t5-final-completion').classList.contains('hidden')) {
+                      document.getElementById('t5-level-select').classList.remove('hidden');
+                 }
+            }
+        }
+
+        function renderAllTasks() {
+            renderTask3();
+        }
+
+        // --- TASK 1 ---
+        function initTask1() {
+            t1CurrentIndex = 0;
+            updateT1Display();
+        }
+
+        function updateT1Display() {
+            // 自動跳過已完成的單字 (Skip completed items)
+            while(t1CurrentIndex < vocabList.length && vocabList[t1CurrentIndex].t1Completed) {
+                t1CurrentIndex++;
+            }
+
+            const content = document.getElementById('t1-content');
+            const completion = document.getElementById('t1-completion');
+            const total = vocabList.length;
+            const completedCount = vocabList.filter(i => i.t1Completed).length;
+
+            if (total === 0) {
+                 content.classList.add('hidden');
+                 completion.classList.add('hidden');
+                 return; 
+            }
+            
+            if (t1CurrentIndex >= total || completedCount >= total) {
+                content.classList.add('hidden');
+                completion.classList.remove('hidden');
+                document.getElementById('t1-progress').style.width = '100%';
+                return;
+            }
+
+            content.classList.remove('hidden');
+            completion.classList.add('hidden');
+
+            const item = vocabList[t1CurrentIndex];
+            document.getElementById('t1-word').innerText = item.word;
+            document.getElementById('t1-meaning').innerText = item.meaning;
+            document.getElementById('t1-current-num').innerText = Math.min(completedCount + 1, total);
+            document.getElementById('t1-total-num').innerText = total;
+            document.getElementById('t1-progress').style.width = `${(completedCount / total) * 100}%`;
+            
+            document.getElementById('t1-feedback-msg').style.opacity = '0';
+        }
+
+        function playCurrentWord() {
+            const item = vocabList[t1CurrentIndex];
+            if(item) {
+                const utterance = new SpeechSynthesisUtterance(item.word);
+                utterance.lang = 'en-US';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function checkSyllableAnswer(count) {
+            const item = vocabList[t1CurrentIndex];
+            const feedbackMsg = document.getElementById('t1-feedback-msg');
+            
+            if (count === item.syllableCount) {
+                item.t1Completed = true;
+                saveProgress(); // SAVE
+                feedbackMsg.style.opacity = '0'; 
+                showFirework('t1-firework-overlay'); 
+                setTimeout(() => {
+                    t1CurrentIndex++;
+                    updateT1Display();
+                }, 1500); 
+            } else {
+                const card = document.querySelector('#t1-game-area .bg-white');
+                card.classList.add('animate-pulse', 'border-red-400');
+                setTimeout(() => card.classList.remove('animate-pulse', 'border-red-400'), 500);
+                
+                feedbackMsg.innerText = `喔喔！答案不是 ${count} 個音節喔，再聽一次！`;
+                feedbackMsg.style.opacity = '1';
+                playCurrentWord();
+            }
+        }
+
+        function showFirework(overlayId) {
+            const overlay = document.getElementById(overlayId);
+            if(overlay) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                }, 1200);
+            }
+        }
+
+        // --- TASK 3 ---
+        function renderTask3() {
+            const container = document.getElementById('traffic-light-container');
+            container.innerHTML = '';
+            vocabList.forEach(item => {
+                const isGreen = item.status === 'green';
+                const html = `
+                <div class="card p-5 text-center relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-2 h-full ${isGreen ? 'bg-green-400' : 'bg-red-400'} transition-colors" id="status-bar-${item.id}"></div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-1 break-words">${item.word}</h3>
+                    <p class="text-gray-500 text-sm mb-4">${item.ipa}</p>
+                    <div class="flex justify-center gap-3">
+                        <button onclick="setStatus(${item.id}, 'green')" 
+                            class="w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all ${isGreen ? 'bg-green-100 border-green-500 text-green-600 scale-110' : 'border-gray-200 text-gray-300 hover:border-green-300'}">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                        <button onclick="setStatus(${item.id}, 'red')" 
+                            class="w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all ${!isGreen ? 'bg-red-100 border-red-500 text-red-600 scale-110' : 'border-gray-200 text-gray-300 hover:border-red-300'}">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function setStatus(id, status) {
+            const item = vocabList.find(i => i.id === id);
+            item.status = status;
+            saveProgress(); // SAVE
+            renderTask3();
+        }
+
+        // --- TASK 4 ---
+        function renderRescueStation() {
+            const container = document.getElementById('rescue-container');
+            const countSpan = document.getElementById('rescue-count');
+            container.innerHTML = '';
+            const redItems = vocabList.filter(i => i.status === 'red');
+            countSpan.innerText = redItems.length;
+
+            if (redItems.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center p-12 bg-white rounded-2xl border border-dashed border-gray-300">
+                        <i class="fa-solid fa-check-circle text-4xl text-green-300 mb-3"></i>
+                        <p class="text-gray-500">太棒了！目前沒有標記為紅燈的單字。</p>
+                    </div>`;
+                return;
+            }
+
+            redItems.forEach(item => {
+                let suggestion = "";
+                let isSpecific = true;
+                
+                if (demoSuggestions[item.word]) {
+                    suggestion = demoSuggestions[item.word];
+                } else {
+                    isSpecific = false;
+                    const randIndex = Math.floor(Math.random() * genericSuggestions.length);
+                    suggestion = genericSuggestions[randIndex];
+                }
+                
+                const html = `
+                <div class="bg-white p-6 rounded-xl border-l-4 border-red-400 shadow-sm">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-red-600 break-words">${item.word}</h3>
+                            <p class="text-gray-600">${item.meaning} ${item.ipa}</p>
+                        </div>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg border border-orange-100">
+                        <div class="flex items-start gap-3">
+                            <i class="fa-solid ${isSpecific ? 'fa-star' : 'fa-lightbulb'} text-orange-400 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-orange-800 text-sm">${isSpecific ? '專屬記憶秘訣：' : '通用記憶策略：'}</h4>
+                                <p class="text-gray-700 mt-1 text-sm">${suggestion}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // --- TASK 5: WORD PING PONG (4 Levels) ---
+        function startPingPong(level) {
+            t5SpeechLevel = level;
+            t5CurrentIndex = 0;
+            t5Processing = false;
+            
+            document.getElementById('t5-level-select').classList.add('hidden');
+            document.getElementById('t5-level-completion').classList.add('hidden');
+            document.getElementById('t5-final-completion').classList.add('hidden');
+            document.getElementById('t5-game-area').classList.remove('hidden');
+            
+            updateT5Card();
+        }
+        
+        function exitPingPong() {
+             t5Processing = false;
+             stopListening(); // Make sure mic is turned off
+             document.getElementById('t5-game-area').classList.add('hidden');
+             document.getElementById('t5-level-completion').classList.add('hidden');
+             document.getElementById('t5-final-completion').classList.add('hidden');
+             document.getElementById('t5-level-select').classList.remove('hidden');
+        }
+
+        function startNextLevel() {
+            if (t5SpeechLevel < 4) {
+                startPingPong(t5SpeechLevel + 1);
+            }
+        }
+
+        function playCurrentT5Word() {
+            const item = vocabList[t5CurrentIndex];
+            if(item) {
+                const utterance = new SpeechSynthesisUtterance(item.word);
+                utterance.lang = 'en-US';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Speech Recognition Functions
+        function toggleMicrophone() {
+            if (t5Processing) return;
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+
+        function startListening() {
+            if (!recognition) {
+                alert("您的瀏覽器不支援語音辨識，建議使用 Chrome 或 Edge 瀏覽器進行口說任務。");
+                return;
+            }
+            try {
+                recognition.start();
+                isListening = true;
+                document.getElementById('t5-mic-btn').classList.add('listening-ring', 'bg-red-500', 'text-white');
+                document.getElementById('t5-mic-btn').classList.remove('bg-gray-100', 'text-gray-500');
+                document.getElementById('t5-sub-text').innerText = "Listening... 請說出英文單字";
+                document.getElementById('t5-spoken-text').classList.add('hidden');
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function stopListeningUI() {
+            isListening = false;
+            const micBtn = document.getElementById('t5-mic-btn');
+            if (micBtn) {
+                micBtn.classList.remove('listening-ring', 'bg-red-500', 'text-white');
+                micBtn.classList.add('bg-gray-100', 'text-gray-500');
+            }
+        }
+
+        function stopListening() {
+            if(recognition) {
+                // Aborting the recognition instead of stopping avoids triggering onend unexpectedly
+                // but we should set isListening false first so UI doesn't bug out
+                isListening = false; 
+                recognition.abort();
+            }
+            stopListeningUI();
+        }
+
+        function checkSpeechResult(transcript) {
+            if (t5Processing) return;
+            const item = vocabList[t5CurrentIndex];
+            const correctWord = item.word.toLowerCase().trim();
+            const userSaid = transcript.toLowerCase().trim().replace(/[^a-z\s]/g, '');
+
+            const spokenTextDiv = document.getElementById('t5-spoken-text');
+            spokenTextDiv.innerText = `You said: "${transcript}"`;
+            spokenTextDiv.classList.remove('hidden');
+
+            let isMatch = false;
+            const userWords = userSaid.split(/\s+/);
+
+            // 1. 完全比對 或 包含比對 (Flexible match)
+            if (userSaid === correctWord || userSaid.includes(correctWord) || correctWord.includes(userSaid)) {
+                isMatch = true;
+            } else {
+                // 新增：針對特定易辨識錯誤、同音字、短單字的容錯清單 (Hardcoded fallbacks for U1-U6)
+                const trickyWords = {
+                    // U1
+                    "than": ["then", "dan", "van"],
+                    "pork": ["park", "poke", "port", "part"],
+                    "beef": ["beeps", "be", "leaf", "beat"],
+                    "feel": ["few", "fill", "fell", "field", "fear"],
+                    "steak": ["stick", "state", "skate", "snake", "stay"],
+                    "ham": ["him", "hand", "hem"],
+                    "butter": ["batter", "better", "bother", "brother"],
+                    "meat": ["meet", "me", "need", "neat"],
+                    "smell": ["small", "smile", "smoke"],
+                    "taste": ["test", "paste", "text"],
+                    "dish": ["this", "these", "fish", "dash"],
+                    "top": ["talk", "pop", "cop", "stop"],
+                    "fries": ["price", "prize", "flies", "fried", "rice"],
+                    "knife": ["life", "nice", "night", "wife"],
+                    "fork": ["fault", "flock", "fog", "folk", "fuck", "fall"],
+                    "spoon": ["spawn", "spun", "soon", "moon"],
+                    "bun": ["burn", "fun", "one", "bomb", "bone", "done", "run"],
+                    "rock": ["walk", "lock", "rug", "log", "wrong"],
+                    "shape": ["sheep", "ship", "shake", "shave"],
+                    "fill": ["feel", "few", "pill", "fall"],
+                    "pack": ["peck", "park", "path", "pad", "pat", "pet"],
+                    
+                    // U2
+                    "grass": ["glass", "class", "cross"],
+                    "bite": ["by", "bike", "bye", "buy", "right", "white", "fight"],
+                    "death": ["debt", "deaf", "dead", "desk", "depth"],
+                    "kick": ["cake", "keep", "kid", "kit"],
+                    "kill": ["pill", "chill", "hill", "cow"],
+                    "snake": ["snack", "sneak", "make"],
+                    "wet": ["wait", "weight", "went", "white"],
+                    "deep": ["dip", "did", "keep"],
+                    "true": ["two", "too", "to", "chew", "shoe"],
+                    "bee": ["be", "b", "beat", "me", "fee"],
+                    "inch": ["each", "itch", "age", "edge"],
+                    "wide": ["white", "why", "wife", "wire", "right"],
+                    "mile": ["mild", "mind", "my", "smile"],
+                    "feet": ["fit", "feed", "beat", "seat"],
+                    "air": ["err", "are", "heir", "hair", "ear", "there", "their", "where", "a", "l", "yeah", "year"],
+                    "far": ["for", "four", "fall", "fire", "five"],
+                    "light": ["like", "lie", "night", "right", "life"],
+                    "cross": ["across", "cause", "course", "close"],
+
+                    // U3
+                    "hard": ["heart", "hot", "hat", "hurt", "half"],
+                    "well": ["will", "while", "whale", "wow"],
+                    "share": ["sure", "shell", "show", "chair"],
+                    "weak": ["week", "wake", "wait", "weed"],
+                    "hen": ["hand", "him", "ham", "pen", "ten", "can"],
+                    "bow": ["boat", "bowl", "vow", "bout", "bound", "ball"],
+                    "wise": ["wife", "white", "why", "wine", "ways"],
+                    "cheer": ["chair", "chill", "tear", "clear"],
+                    "mean": ["men", "me", "name", "main", "need"],
+                    "make": ["mate", "may", "made", "wake"],
+                    "break": ["brake", "brick", "brave", "bread"],
+                    "treat": ["tree", "trick", "trip", "street", "three"],
+                    "have": ["half", "hat", "help"],
+                    "grape": ["great", "grade", "grip", "gray"],
+                    "goose": ["good", "ghost", "goes", "goods"],
+                    "duck": ["dark", "dog", "doc", "dot"],
+                    "goat": ["gold", "go", "ghost", "good", "girl"],
+                    "sheep": ["ship", "shape", "sheet", "she", "see"],
+                    "peach": ["pitch", "piece", "peace", "page"],
+                    "pear": ["pair", "bear", "bare", "hair"],
+                    "pound": ["pond", "point", "pounce", "town"],
+                    "pick": ["pig", "peak", "peek", "pit", "pink"],
+                    "bean": ["been", "bin", "being", "mean", "ping"],
+                    "cent": ["sent", "scent", "send", "saint", "sand", "sense", "saying"],
+                    "choose": ["shoes", "juice", "chews", "truths", "tools"],
+
+                    // U4
+                    "blow": ["below", "bro", "bowl", "blue"],
+                    "rose": ["roads", "rolls", "rules", "roast", "rows"],
+                    "must": ["mass", "mask", "mouse", "much", "math", "month"],
+                    "should": ["shoot", "shoe", "showed", "short"],
+                    "or": ["all", "oh", "awe", "are", "our"],
+                    "face": ["faith", "phase", "space", "base"],
+                    "star": ["start", "style", "stuff", "store"],
+                    "shine": ["sign", "time", "shy", "fine"],
+                    "wave": ["wife", "weigh", "way", "wait", "wake"],
+                    "frog": ["blog", "vlog", "flock", "fog", "fuck"],
+                    "pond": ["pound", "point", "pawn", "upon"],
+                    "sharp": ["shop", "shot", "shark", "short"],
+                    "reach": ["rich", "ridge", "witch", "read"],
+                    "space": ["spice", "face", "base", "speech"],
+                    "size": ["sighs", "sides", "signs", "science"],
+                    "as": ["is", "has", "us", "ass", "ice"],
+                    "times": ["time", "types", "tires", "towns"],
+
+                    // U5
+                    "cough": ["call", "caught", "cup", "car", "calf", "cost"],
+                    "noon": ["moon", "known", "none", "room"],
+                    "both": ["boat", "boss", "boy", "bowl", "bolt", "board"],
+                    "stand": ["sand", "stem", "stain", "stamp"],
+                    "cold": ["coal", "coat", "code", "call", "cool"],
+                    "head": ["had", "hat", "hit", "hair", "have"],
+                    "knee": ["need", "me", "neat", "name"],
+                    "nail": ["mail", "male", "now", "know"],
+                    "neck": ["next", "net", "let", "make"],
+                    "root": ["route", "room", "rude", "rule", "road"],
+                    "sweet": ["suite", "sweat", "weed", "swim"],
+                    
+                    // U6
+                    "pass": ["path", "past", "pats", "pets", "pace"],
+                    "throw": ["through", "though", "slow", "flow"],
+                    "point": ["pound", "pond", "points", "pint", "paint", "print", "plant", "port", "part", "appoint", "boy", "coin", "poem", "pulling", "poling", "play", "pointy"],
+                    "win": ["when", "wing", "one", "wind", "went", "we"],
+                    "fail": ["fell", "feel", "sale", "fill", "fair", "fall"],
+                    "test": ["taste", "text", "tents", "chest", "tenth"],
+                    "few": ["feel", "fuel", "fill", "foo", "view", "phew", "flew", "flu", "flue", "shoe", "hue", "hugh", "if you", "a few", "food"],
+                    "grade": ["great", "grey", "gray", "grave"],
+                    "angle": ["angel", "ankle", "uncle", "angry"],
+                    "laugh": ["love", "life", "left", "rough", "loud"],
+                    "push": ["put", "bush", "pull", "puss"],
+                    "lead to": ["little", "leave to", "lead two", "need to"],
+                    "our": ["are", "hour", "out", "owl", "all"],
+                    "sea": ["see", "c", "she", "say"]
+                };
+
+                // 若單字在白名單中，且語音辨識出相似的字，直接算對
+                if (trickyWords[correctWord]) {
+                    for (let w of trickyWords[correctWord]) {
+                        if (userWords.includes(w) || userSaid === w) {
+                            isMatch = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!isMatch) {
+                    // 2. 模糊比對 (Levenshtein Distance 萊文斯坦距離)
+                    const distance = levenshteinDistance(userSaid, correctWord);
+                    const maxLength = Math.max(userSaid.length, correctWord.length);
+                    const similarity = maxLength === 0 ? 0 : (maxLength - distance) / maxLength;
+                    
+                    // 稍微降低門檻至 0.65，讓 3 個字母的單字也能容許 1 個字母的誤差 (例如: air -> aim)
+                    if (similarity >= 0.65) { 
+                        isMatch = true;
+                    } else {
+                        // 3. 檢查單字中是否包含發音相近的字 (拆字比對)
+                        if (correctWord.split(/\s+/).length === 1) {
+                            for (let w of userWords) {
+                                let d = levenshteinDistance(w, correctWord);
+                                if (d <= 1 && correctWord.length >= 3) isMatch = true; // 允許 1 個字母的誤差
+                                if (d <= 2 && correctWord.length >= 5) isMatch = true; // 長單字允許 2 個字母誤差
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (isMatch) {
+                const micBtn = document.getElementById('t5-mic-btn');
+                micBtn.classList.add('bg-green-500', 'text-white');
+                micBtn.classList.remove('bg-red-500', 'bg-gray-100', 'listening-ring');
+                document.getElementById('t5-skip-btn').classList.add('hidden');
+                handlePingPongSuccess();
+            } else {
+                t5FailCount++;
+                const card = document.getElementById('t5-card');
+                card.classList.add('animate-shake', 'border-red-400');
+                setTimeout(() => card.classList.remove('animate-shake', 'border-red-400'), 500);
+                document.getElementById('t5-sub-text').innerText = "Try again! 聽起來不太像喔，請再試一次。";
+                
+                // 如果失敗 3 次以上，顯示強制通關按鈕
+                if (t5FailCount >= 3) {
+                    document.getElementById('t5-skip-btn').classList.remove('hidden');
+                }
+            }
+        }
+
+        // 新增：計算兩個字串的編輯距離
+        function levenshteinDistance(a, b) {
+            if(a.length === 0) return b.length; 
+            if(b.length === 0) return a.length; 
+            var matrix = [];
+            for(var i = 0; i <= b.length; i++){ matrix[i] = [i]; }
+            for(var j = 0; j <= a.length; j++){ matrix[0][j] = j; }
+            for(var i = 1; i <= b.length; i++){
+                for(var j = 1; j <= a.length; j++){
+                    if(b.charAt(i-1) === a.charAt(j-1)){
+                        matrix[i][j] = matrix[i-1][j-1];
+                    } else {
+                        matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, Math.min(matrix[i][j-1] + 1, matrix[i-1][j] + 1));
+                    }
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+
+        // 新增：強制通關功能
+        function forcePassPingPong() {
+            if (t5Processing) return;
+            const micBtn = document.getElementById('t5-mic-btn');
+            micBtn.classList.add('bg-green-500', 'text-white');
+            micBtn.classList.remove('bg-red-500', 'bg-gray-100', 'listening-ring');
+            document.getElementById('t5-skip-btn').classList.add('hidden');
+            
+            // 標記該單字曾使用過強制通關
+            vocabList[t5CurrentIndex].t5Forced = true;
+            
+            handlePingPongSuccess();
+        }
+
+        function updateT5Card() {
+            // 自動跳過該關卡已完成的單字 (Skip completed items for the current level)
+            while (t5CurrentIndex < vocabList.length) {
+                const item = vocabList[t5CurrentIndex];
+                let isCompleted = false;
+                if(t5SpeechLevel === 1) isCompleted = item.passedLevel1;
+                if(t5SpeechLevel === 2) isCompleted = item.passedLevel2;
+                if(t5SpeechLevel === 3) isCompleted = item.passedLevel3;
+                if(t5SpeechLevel === 4) isCompleted = item.passedLevel4;
+                
+                if (isCompleted) t5CurrentIndex++;
+                else break;
+            }
+
+            const card = document.getElementById('t5-card');
+            const total = vocabList.length;
+            t5Processing = false;
+            t5FailCount = 0; // 重置失敗次數
+            document.getElementById('t5-skip-btn').classList.add('hidden'); // 隱藏強制通關按鈕
+            stopListeningUI(); // Reset mic state
+
+            if (total === 0) return;
+
+            let completedCount = 0;
+            vocabList.forEach(i => {
+                if(t5SpeechLevel === 1 && i.passedLevel1) completedCount++;
+                if(t5SpeechLevel === 2 && i.passedLevel2) completedCount++;
+                if(t5SpeechLevel === 3 && i.passedLevel3) completedCount++;
+                if(t5SpeechLevel === 4 && i.passedLevel4) completedCount++;
+            });
+
+            // Check if level completed
+            if(t5CurrentIndex >= total || completedCount >= total) {
+                document.getElementById('t5-game-area').classList.add('hidden');
+                if(t5SpeechLevel < 4) {
+                    const titles = ["", "Level 1 完成！", "Level 2 完成！", "Level 3 完成！"];
+                    const msgs = [
+                        "", 
+                        "你很棒！接下來進入 Level 2：聽音辨義。", 
+                        "太厲害了！接下來進入 Level 3：看英說英口說挑戰。",
+                        "發音很棒！接下來進入最終挑戰 Level 4：看中說英。"
+                    ];
+                    document.getElementById('t5-completion-title').innerText = titles[t5SpeechLevel];
+                    document.getElementById('t5-completion-msg').innerText = msgs[t5SpeechLevel];
+                    document.getElementById('t5-level-completion').classList.remove('hidden');
+                } else {
+                    document.getElementById('t5-final-completion').classList.remove('hidden');
+                }
+                return;
+            }
+
+            const item = vocabList[t5CurrentIndex];
+            
+            // Reset Card Styles
+            card.classList.remove('bg-green-50', 'border-green-400');
+            card.classList.add('border-yellow-100', 'bg-white');
+            document.getElementById('t5-success-badge').classList.add('hidden');
+            document.getElementById('t5-confetti-container').innerHTML = '';
+
+            const modeLabel = document.getElementById('t5-mode-label');
+            const mainText = document.getElementById('t5-main-text');
+            const subText = document.getElementById('t5-sub-text');
+            const optionsGrid = document.getElementById('t5-options-grid');
+            const replayBtn = document.getElementById('t5-audio-replay-btn');
+            
+            const micContainer = document.getElementById('t5-mic-container');
+            const spokenText = document.getElementById('t5-spoken-text');
+            spokenText.classList.add('hidden');
+            spokenText.innerText = '';
+            
+            // Reset mic button styling
+            const micBtn = document.getElementById('t5-mic-btn');
+            micBtn.className = "relative w-20 h-20 rounded-full bg-gray-100 text-gray-500 text-3xl hover:bg-gray-200 transition-colors shadow-sm focus:outline-none flex items-center justify-center z-10";
+
+
+            // Setup per Level
+            if (t5SpeechLevel === 1) { // Listen -> Select Word
+                modeLabel.innerText = "Level 1: 聽音辨字 (Listen & Choose Word)";
+                mainText.innerHTML = '<i class="fa-solid fa-volume-high text-yellow-500 animate-pulse"></i>';
+                subText.innerText = "Listen and select the correct word.";
+                optionsGrid.classList.remove('hidden');
+                micContainer.classList.add('hidden');
+                generateOptions(item, 'word');
+                setTimeout(playCurrentT5Word, 500); // Auto play
+                replayBtn.classList.remove('hidden'); 
+                mainText.onclick = playCurrentT5Word;
+                mainText.style.cursor = 'pointer';
+
+            } else if (t5SpeechLevel === 2) { // Listen -> Select Meaning
+                modeLabel.innerText = "Level 2: 聽音辨義 (Listen & Choose Meaning)";
+                mainText.innerHTML = '<i class="fa-solid fa-volume-high text-purple-500 animate-pulse"></i>';
+                subText.innerText = "Listen and select the correct meaning.";
+                optionsGrid.classList.remove('hidden');
+                micContainer.classList.add('hidden');
+                generateOptions(item, 'meaning');
+                setTimeout(playCurrentT5Word, 500);
+                replayBtn.classList.remove('hidden');
+                mainText.onclick = playCurrentT5Word;
+                mainText.style.cursor = 'pointer';
+                
+            } else if (t5SpeechLevel === 3) { // See Word -> Speak
+                modeLabel.innerText = "Level 3: 看英說英 (See Word, Speak English)";
+                mainText.innerHTML = item.word;
+                subText.innerText = "點擊下方麥克風，大聲唸出這個單字！";
+                optionsGrid.classList.add('hidden');
+                replayBtn.classList.add('hidden');
+                micContainer.classList.remove('hidden');
+                mainText.onclick = null;
+                mainText.style.cursor = 'default';
+                
+            } else if (t5SpeechLevel === 4) { // See Meaning -> Speak
+                modeLabel.innerText = "Level 4: 看中說英 (See Chinese, Speak English)";
+                mainText.innerHTML = item.meaning;
+                subText.innerText = "點擊下方麥克風，說出對應的英文單字！";
+                optionsGrid.classList.add('hidden');
+                replayBtn.classList.add('hidden');
+                micContainer.classList.remove('hidden');
+                mainText.onclick = null;
+                mainText.style.cursor = 'default';
+            }
+            
+            document.getElementById('t5-current-num').innerText = Math.min(completedCount + 1, total);
+            document.getElementById('t5-total-num').innerText = total;
+            document.getElementById('t5-progress').style.width = `${(completedCount / total) * 100}%`;
+        }
+
+        function generateOptions(correctItem, type) {
+            const grid = document.getElementById('t5-options-grid');
+            grid.innerHTML = '';
+            
+            // Pick 3 distractors
+            let distractors = vocabList.filter(i => i.id !== correctItem.id);
+            distractors.sort(() => Math.random() - 0.5);
+            let options = distractors.slice(0, 3);
+            options.push(correctItem);
+            options.sort(() => Math.random() - 0.5);
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "bg-gray-50 border-2 border-gray-200 rounded-xl p-4 text-lg font-bold text-gray-700 hover:bg-blue-50 hover:border-blue-300 transition break-words";
+                btn.innerText = type === 'word' ? opt.word : opt.meaning;
+                btn.onclick = () => checkT5Option(opt.id, correctItem.id, btn);
+                grid.appendChild(btn);
+            });
+        }
+
+        function checkT5Option(selectedId, correctId, btnElement) {
+            if (t5Processing) return;
+
+            if (selectedId === correctId) {
+                btnElement.classList.add('bg-green-100', 'border-green-500', 'text-green-700');
+                handlePingPongSuccess();
+            } else {
+                btnElement.classList.add('bg-red-100', 'border-red-500', 'text-red-700', 'animate-shake');
+                setTimeout(() => btnElement.classList.remove('animate-shake'), 500);
+                playCurrentT5Word(); 
+            }
+        }
+
+        function handlePingPongSuccess() {
+            if (t5Processing) return;
+            t5Processing = true;
+
+            if (recognition) recognition.abort();
+
+            const card = document.getElementById('t5-card');
+            const item = vocabList[t5CurrentIndex];
+            
+            if(t5SpeechLevel === 1) item.passedLevel1 = true;
+            if(t5SpeechLevel === 2) item.passedLevel2 = true;
+            if(t5SpeechLevel === 3) item.passedLevel3 = true;
+            if(t5SpeechLevel === 4) item.passedLevel4 = true;
+            saveProgress(); // SAVE
+
+            card.classList.remove('bg-white', 'border-yellow-100');
+            card.classList.add('bg-green-50', 'border-green-400');
+            document.getElementById('t5-success-badge').classList.remove('hidden');
+            
+            if(t5SpeechLevel === 2 || t5SpeechLevel === 4) {
+                 document.getElementById('t5-main-text').innerHTML = item.word;
+            }
+
+            createConfetti(15);
+            showFirework('t5-firework-overlay');
+
+            setTimeout(() => {
+                t5CurrentIndex++;
+                updateT5Card();
+            }, 1500);
+        }
+
+        // --- TASK 6: SPELLING BEE ---
+        function initTask6() {
+            t6CurrentIndex = 0;
+            // updateT6Display(); // Called by tab switch
+        }
+
+        function playCurrentT6Word() {
+            const item = vocabList[t6CurrentIndex];
+            if(item) {
+                const utterance = new SpeechSynthesisUtterance(item.word);
+                utterance.lang = 'en-US';
+                window.speechSynthesis.speak(utterance);
+                document.getElementById('t6-input').focus();
+            }
+        }
+
+        function updateT6Display() {
+            // 自動跳過已完成的單字 (Skip completed items)
+            while(t6CurrentIndex < vocabList.length && vocabList[t6CurrentIndex].spellingCompleted) {
+                t6CurrentIndex++;
+            }
+
+            const content = document.getElementById('t6-content');
+            const completion = document.getElementById('t6-completion');
+            const total = vocabList.length;
+            const completedCount = vocabList.filter(i => i.spellingCompleted).length;
+
+            if (total === 0) return;
+
+            if (t6CurrentIndex >= total || completedCount >= total) {
+                content.classList.add('hidden');
+                completion.classList.remove('hidden');
+                document.getElementById('t6-progress').style.width = '100%';
+                return;
+            }
+
+            content.classList.remove('hidden');
+            completion.classList.add('hidden');
+
+            const item = vocabList[t6CurrentIndex];
+            document.getElementById('t6-current-num').innerText = Math.min(completedCount + 1, total);
+            document.getElementById('t6-total-num').innerText = total;
+            document.getElementById('t6-progress').style.width = `${(completedCount / total) * 100}%`;
+            
+            const input = document.getElementById('t6-input');
+            input.value = '';
+            input.classList.remove('text-red-500');
+            document.getElementById('t6-feedback-text').style.opacity = '0';
+            
+            // Auto play audio after a slight delay
+            setTimeout(playCurrentT6Word, 500);
+        }
+
+        function checkSpelling() {
+            const input = document.getElementById('t6-input');
+            const feedback = document.getElementById('t6-feedback-text');
+            const item = vocabList[t6CurrentIndex];
+            
+            const userAnswer = input.value.trim().toLowerCase();
+            const correctAnswer = item.word.toLowerCase();
+
+            if (userAnswer === correctAnswer) {
+                // Success
+                item.spellingCompleted = true;
+                saveProgress(); // SAVE
+                showFirework('t6-firework-overlay');
+                feedback.innerText = "Correct!";
+                feedback.className = "h-6 text-green-500 text-sm font-bold mt-2 transition-opacity";
+                feedback.style.opacity = '1';
+                
+                setTimeout(() => {
+                    t6CurrentIndex++;
+                    updateT6Display();
+                }, 1200);
+            } else {
+                // Fail
+                input.classList.add('animate-shake', 'text-red-500');
+                feedback.innerText = "Try again!";
+                feedback.className = "h-6 text-red-500 text-sm font-bold mt-2 transition-opacity";
+                feedback.style.opacity = '1';
+                setTimeout(() => input.classList.remove('animate-shake'), 500);
+                playCurrentT6Word();
+            }
+        }
+
+
+        // --- TASK 7 (Formerly 6) (GENERATION) ---
+        function generateReport() {
+            const selector = document.getElementById('unitSelector');
+            document.getElementById('report-unit-title').innerText = selector.options[selector.selectedIndex].text;
+            document.getElementById('report-student-name').innerText = currentStudentId || "Student";
+            
+            const total = vocabList.length;
+            
+            // Calc T1 Progress
+            const t1Count = vocabList.filter(i => i.t1Completed).length;
+            const t1Progress = total === 0 ? 0 : Math.round((t1Count / total) * 100);
+
+            // Calc Mastery (Green Lights)
+            const greenCount = vocabList.filter(i => i.status === 'green').length;
+            const mastery = total === 0 ? 0 : Math.round((greenCount / total) * 100);
+            
+            // Calc Speech Progress - now based on 4 levels
+            let totalChallenges = total * 4;
+            let passedCount = 0;
+            vocabList.forEach(i => {
+                if(i.passedLevel1) passedCount++;
+                if(i.passedLevel2) passedCount++;
+                if(i.passedLevel3) passedCount++;
+                if(i.passedLevel4) passedCount++;
+            });
+            const speechProgress = totalChallenges === 0 ? 0 : Math.round((passedCount / totalChallenges) * 100);
+
+            // Calc Spelling Progress
+            const spellingCount = vocabList.filter(i => i.spellingCompleted).length;
+            const spellingProgress = total === 0 ? 0 : Math.round((spellingCount / total) * 100);
+
+            document.getElementById('report-total').innerText = total;
+            document.getElementById('report-t1-syllable').innerText = t1Progress + "%";
+            document.getElementById('report-mastery').innerText = mastery + "%";
+            document.getElementById('report-speech').innerText = speechProgress + "%";
+            document.getElementById('report-spelling').innerText = spellingProgress + "%";
+
+            const tbody = document.getElementById('report-table-body');
+            tbody.innerHTML = '';
+            
+            vocabList.forEach(item => {
+                const isGreen = item.status === 'green';
+                const row = `
+                <tr class="border-b border-gray-100 hover:bg-gray-50 text-sm">
+                    <td class="p-3 font-bold text-gray-800">
+                        ${item.word} <br>
+                        <span class="text-xs text-gray-500 font-normal">${item.meaning}</span>
+                    </td>
+                    <td class="p-3 text-center">
+                         <span class="${item.t1Completed ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-700'} px-2 py-1 rounded text-xs font-bold">
+                             ${item.syllableCount} ${item.t1Completed ? '<i class="fa-solid fa-check ml-1"></i>' : ''}
+                         </span>
+                    </td>
+                    <td class="p-3 text-center">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold ${isGreen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                            ${isGreen ? 'Green' : 'Red'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center">
+                        <div class="flex justify-center items-center gap-1">
+                            <span class="${item.passedLevel1 ? 'bg-yellow-400 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 1">1</span>
+                            <span class="${item.passedLevel2 ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 2">2</span>
+                            <span class="${item.passedLevel3 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 3">3</span>
+                            <span class="${item.passedLevel4 ? 'bg-red-400 text-white' : 'bg-gray-200 text-gray-400'} w-5 h-5 rounded-full flex items-center justify-center text-xs" title="Level 4">4</span>
+                            ${item.t5Forced ? '<i class="fa-solid fa-forward-step text-orange-400 ml-1 text-sm" title="曾使用強制通關"></i>' : ''}
+                        </div>
+                    </td>
+                    <td class="p-3 text-center">
+                         ${item.spellingCompleted ? '<i class="fa-solid fa-check text-indigo-500 text-lg"></i>' : '<span class="text-gray-300">-</span>'}
+                    </td>
+                </tr>`;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        // 新增：直接將報表轉成 PDF 並下載的功能
+        function downloadPDF() {
+            const btn = document.getElementById('pdf-download-btn');
+            const originalText = btn.innerHTML;
+            
+            // 變更按鈕狀態為處理中
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在生成 PDF...';
+            btn.disabled = true;
+
+            // 指定要轉成 PDF 的區塊 (學習歷程報告書)
+            const element = document.getElementById('printable-report');
+            const fileName = `單字建築師_${currentUnit}_${currentStudentId || 'Student'}.pdf`;
+
+            // PDF 輸出設定
+            const opt = {
+                margin:       0.3,
+                filename:     fileName,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
-            const getStatusStyles = (s) => {
-                if(s==='success') return 'bg-green-50 border-green-400 ring-1 ring-green-200';
-                if(s==='error') return 'bg-red-50 border-red-400 ring-1 ring-red-200';
+
+            // 執行下載
+            html2pdf().set(opt).from(element).save().then(() => {
+                // 恢復按鈕狀態
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }).catch(err => {
+                console.error(err);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert("PDF 生成失敗，請嘗試使用螢幕截圖繳交。");
+            });
+        }
+
+        function createConfetti(amount) {
+            const container = document.getElementById('t5-confetti-container');
+            const colors = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa'];
+            for(let i=0; i<amount; i++) {
+                const conf = document.createElement('div');
+                conf.className = 'confetti';
+                conf.style.left = Math.random() * 100 + '%';
+                conf.style.animationDelay = Math.random() * 0.5 + 's';
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                container.appendChild(conf);
+            }
+        }
+    </script>
+</body>
+</html>
+
