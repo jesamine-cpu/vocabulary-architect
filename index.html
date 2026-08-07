@@ -297,6 +297,18 @@
                         <p class="text-xs text-gray-400 mt-1 ml-1"><i class="fa-solid fa-circle-info"></i> 輸入後按 Enter 即可登入 (Press Enter to login)</p>
                     </div>
 
+                    <!-- Book Selector: Hanlin B1/B3/B5 -->
+                    <div class="max-w-md mx-auto mb-4 text-left">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            <i class="fa-solid fa-book text-blue-500"></i> 冊別 (Select Book):
+                        </label>
+                        <select id="bookSelector" onchange="changeBook()" class="w-full p-4 border-2 border-blue-200 rounded-xl text-xl font-bold text-gray-700 focus:border-blue-500 focus:ring-blue-200 transition bg-blue-50 cursor-pointer">
+                            <option value="B1" selected>B1（七上）</option>
+                            <option value="B3">B3（八上）</option>
+                            <option value="B5">B5（九上）</option>
+                        </select>
+                    </div>
+
                     <!-- Unit Selector -->
                     <div class="max-w-md mx-auto mb-4 text-left">
                         <label class="block text-sm font-bold text-gray-700 mb-2">
@@ -784,251 +796,35 @@
         }
 
         // --- DATA CONFIGURATION ---
-        const unitData = {
-            "U1": `foreign | for/eign | [ˈfɔrən] | 外國的
-than | than | [ðæn] | 比
-friendly | friend/ly | [ˈfrɛndli] | 友善的
-convenient | con/ven/ient | [kənˈvinjənt] | 便利的
-pork | pork | [pɔrk] | 豬肉
-beef | beef | [bif] | 牛肉
-delicious | de/li/cious | [dɪˈlɪʃəs] | 美味的
-feel | feel | [fil] | 感到
-steak | steak | [stek] | 牛排
-menu | men/u | [ˈmɛnju] | 菜單
-waitress | wait/ress | [ˈwetrɪs] | 女服務生
-ham | ham | [hæm] | 火腿
-butter | but/ter | [ˈbʌtɚ] | 奶油
-medium | me/di/um | [ˈmidiəm] | 五分熟;中等的
-meat | meat | [mit] | 肉
-smell | smell | [smɛl] | 聞起來;氣味
-taste | taste | [test] | 嚐起來;味道
-as... as... | as/as | [æz æz] | 如同...一樣...
-get around | get/a/round | [gɛt əˈraʊnd] | 各處旅行
-dish | dish | [dɪʃ] | 菜餚
-more | more | [mɔr] | 更...
-get | get | [gɛt] | 變成
-sound | sound | [saʊnd] | 聽起來
-top | top | [tɑp] | 頂部(的)
-fries | fries | [fraɪz] | 薯條
-knife | knife | [naɪf] | 刀子
-fork | fork | [fɔrk] | 叉子
-noodle | noo/dle | [ˈnudl] | 麵
-chopsticks | chop/sticks | [ˈtʃɑpˌstɪks] | 筷子
-spoon | spoon | [spun] | 湯匙
-fried chicken | fried/chick/en | [fraɪd ˈtʃɪkən] | 炸雞
-waiter | wait/er | [ˈwetɚ] | 男服務生
-strawberry | straw/ber/ry | [ˈstrɔˌbɛri] | 草莓
-bun | bun | [bʌn] | 小圓麵包
-# Reading
-earth | earth | [ɜrθ] | 地球
-bring | bring | [brɪŋ] | 帶來;攜帶
-smile | smile | [smaɪl] | 微笑
-land | land | [lænd] | 陸地;落地
-rock | rock | [rɑk] | 岩石
-shape | shape | [ʃep] | 形狀
-clear | clear | [klɪr] | 晴朗的;清楚的
-comfortable | com/fort/a/ble | [ˈkʌmfɚtəb!] | 舒適的
-fill | fill | [fɪl] | 充滿;裝滿
-pack | pack | [pæk] | 打包;塞進`,
-            "U2": `grass | grass | [græs] | 草地
-red fire ant | red/fire/ant | [rɛd faɪr ænt] | 紅火蟻
-dangerous | dan/ger/ous | [ˈdendʒərəs] | 危險的
-bite | bite | [baɪt] | 咬;咬(傷)
-death | death | [dɛθ] | 死亡
-kick | kick | [kɪk] | 踢
-themselves | them/selves | [ðəmˈsɛlvz] | 他們自己
-kill | kill | [kɪl] | 殺死
-stay away from | stay/a/way/from | [ste əˈwe frɑm] | 遠離...
-agree | a/gree | [əˈgri] | 同意
-circle | cir/cle | [ˈsɜrk!] | 圓圈
-myself | my/self | [maɪˈsɛlf] | 我自己
-snake | snake | [snek] | 蛇
-wet | wet | [wɛt] | 潮濕的
-scary | scar/y | [ˈskɛri] | 令人害怕的
-deep | deep | [dip] | 深的
-true | true | [tru] | 真實的
-most | most | [most] | 最...
-give a hand | give/a/hand | [gɪv ə hænd] | 幫助...
-spider | spi/der | [ˈspaɪdɚ] | 蜘蛛
-gram | gram | [græm] | 公克
-insect | in/sect | [ˈɪnsɛkt] | 昆蟲
-bee | bee | [bi] | 蜜蜂
-inch | inch | [ɪntʃ] | 吋
-wide | wide | [waɪd] | 寬的
-kilogram | kil/o/gram | [ˈkɪləˌgræm] | 公斤
-nature | na/ture | [ˈnetʃɚ] | 大自然
-below | be/low | [bəˈlo] | 在...之下
-sea level | sea/lev/el | [si ˈlɛv!] | 海平面
-mile | mile | [maɪl] | 英里
-feet | feet | [fit] | 英尺
-# Reading
-smart | smart | [smɑrt] | 聰明的
-traffic | traf/fic | [ˈtræfɪk] | 交通
-appear | ap/pear | [əˈpɪr] | 似乎
-air | air | [ɛr] | 空氣
-far | far | [fɑr] | 遠
-slow | slow | [slo] | 放慢
-light | light | [laɪt] | 燈;光
-cross | cross | [krɔs] | 穿越`,
-            "U3": `loudly | loud/ly | [ˈlaʊdli] | 大聲地
-hard | hard | [hɑrd] | 努力地;困難的
-well | well | [wɛl] | 好地
-share | share | [ʃɛr] | 分享
-weak | weak | [wik] | 虛弱的
-hen | hen | [hɛn] | 母雞
-dirty | dirt/y | [ˈdɜrti] | 髒的
-bow | bow | [baʊ] | 鞠躬
-without | with/out | [wɪˈðaʊt] | 沒有
-quickly | quick/ly | [ˈkwɪkli] | 快地
-web page | web/page | [ˈwɛb ˌpedʒ] | 網頁
-service | serv/ice | [ˈsɜrvɪs] | 服務
-wise | wise | [waɪz] | 明智的
-cheer | cheer | [tʃɪr] | 歡呼
-celebrate | cel/e/brate | [ˈsɛləˌbret] | 慶祝
-mean | mean | [min] | 刻薄的
-make | make | [mek] | 製作;使...
-break | break | [brek] | 休息
-over | o/ver | [ˈovɚ] | 超過
-treat | treat | [trit] | 對待
-have | have | [hæv] | 使...
-grape | grape | [grep] | 葡萄
-goose | goose | [gus] | 鵝
-duck | duck | [dʌk] | 鴨
-goat | goat | [got] | 山羊
-sheep | sheep | [ʃip] | 綿羊
-peach | peach | [pitʃ] | 桃子
-turtle | tur/tle | [ˈtɜrt!] | 烏龜
-pear | pear | [pɛr] | 梨子
-papaya | pa/pa/ya | [pəˈpaɪə] | 木瓜
-vegetable | veg/e/ta/ble | [ˈvɛdʒətəb!] | 蔬菜
-guava | gua/va | [ˈgwɑvə] | 芭樂
-tomato | to/ma/to | [təˈmeto] | 番茄
-watermelon | wa/ter/mel/on | [ˈwɔtɚˌmɛlən] | 西瓜
-# Reading
-American | A/mer/i/can | [əˈmɛrɪkən] | 美國人
-million | mil/lion | [ˈmɪljən] | 百萬
-pound | pound | [paʊnd] | 磅
-pick | pick | [pɪk] | 採摘
-bean | bean | [bin] | 豆
-cent | cent | [sɛnt] | 美分
-chance | chance | [tʃæns] | 機會
-choose | choose | [tʃuz] | 選擇`,
-            "U4": `typhoon | ty/phoon | [taɪˈfun] | 颱風
-blow | blow | [blo] | 吹
-rose | rose | [roz] | 玫瑰花
-balcony | bal/co/ny | [ˈbælkəni] | 陽台
-must | must | [mʌst] | 必須
-prepare | pre/pare | [prɪˈpɛr] | 準備
-should | should | [ʃʊd] | 應該
-candle | can/dle | [ˈkænd!] | 蠟燭
-radio | ra/di/o | [ˈrediˌo] | 收音機
-news | news | [njuz] | 新聞
-if | if | [ɪf] | 如果
-or | or | [ɔr] | 否則
-have to | have/to | [ˈhæv tə] | 必須
-go out | go/out | [go aʊt] | 熄滅
-train | train | [tren] | 訓練
-face | face | [fes] | 面對
-try one's best | try/one's/best | [traɪ wʌnz bɛst] | 盡力而為
-turn on | turn/on | [tɜrn ɑn] | 打開
-latest | lat/est | [ˈletɪst] | 最新的
-star | star | [stɑr] | 星星
-shine | shine | [ʃaɪn] | 閃耀
-giant | gi/ant | [ˈdʒaɪənt] | 巨大的
-wave | wave | [wev] | 浪
-rainbow | rain/bow | [ˈrenˌbo] | 彩虹
-pretty | pret/ty | [ˈprɪti] | 漂亮的
-garden | gar/den | [ˈgɑrdn] | 花園
-frog | frog | [frɑg] | 青蛙
-noise | noise | [nɔɪz] | 噪音
-pond | pond | [pɑnd] | 池塘
-noisy | nois/y | [ˈnɔɪzi] | 嘈雜的
-# Reading
-earthquake | earth/quake | [ˈɜrθˌkwek] | 地震
-bravely | brave/ly | [ˈbrevli] | 勇敢地
-sharp | sharp | [ʃɑrp] | 尖銳的
-reach | reach | [ritʃ] | 到達
-space | space | [spes] | 空間
-size | size | [saɪz] | 大小;尺寸
-as | as | [æz] | 作為;如同
-times | times | [taɪmz] | 倍`,
-            "U5": `although | al/though | [ɔlˈðo] | 雖然
-matter | mat/ter | [ˈmætɚ] | 問題
-sore throat | sore/throat | [sor θrot] | 喉嚨痛
-explain | ex/plain | [ɪkˈsplen] | 解釋
-cough | cough | [kkɔf] | 咳嗽
-probably | prob/a/bly | [ˈprɑbəbli] | 很可能
-take care of | take/care/of | [tek kɛr ʌv] | 照顧
-noon | noon | [nun] | 中午
-both | both | [boθ] | 兩者(都)
-medicine | med/i/cine | [ˈmɛdəsn] | 藥
-honey | hon/ey | [ˈhʌni] | 蜂蜜
-lemon | lem/on | [ˈlɛmən] | 檸檬
-useful | use/ful | [ˈjusfəl] | 有用的
-stand | stand | [stænd] | 攤位
-feel like | feel/like | [fil laɪk] | 想要
-cold | cold | [kold] | 感冒
-well | well | [wɛl] | 健康的
-treat | treat | [trit] | 治療
-head | head | [hɛd] | 頭
-headache | head/ache | [ˈhɛdˌek] | 頭痛
-stomachache | stom/ach/ache | [ˈstʌməkˌek] | 胃痛
-fever | fe/ver | [ˈfivɚ] | 發燒
-runny nose | run/ny/nose | [ˈrʌni noz] | 流鼻水
-knee | knee | [ni] | 膝蓋
-nail | nail | [nel] | 指甲
-finger | fin/ger | [ˈfɪŋgɚ] | 手指
-neck | neck | [nɛk] | 脖子
-shoulder | shoul/der | [ˈʃoldɚ] | 肩膀
-# Reading
-bakery | bak/er/y | [ˈbekəri] | 麵包店
-common | com/mon | [ˈkɑmən] | 常見的
-actually | ac/tual/ly | [ˈæktʃʊəli] | 實際上
-helpful | help/ful | [ˈhɛlpfəl] | 有幫助的
-root | root | [rut] | 根
-reason | rea/son | [ˈrizn] | 原因
-power up | pow/er/up | [ˈpaʊɚ ʌp] | 增強力量
-sweet | sweet | [swit] | 甜食
-sharp | sharp | [ʃɑrp] | 敏銳的`,
-            "U6": `pass | pass | [pæs] | 傳遞
-throw | throw | [θro] | 丟;投擲
-point | point | [pɔɪnt] | 得分
-win | win | [wɪn] | 贏
-until | un/til | [ənˈtɪl] | 直到
-member | mem/ber | [ˈmɛmbɚ] | 成員
-group | group | [grup] | 團體
-fail | fail | [fel] | 失敗
-test | test | [tɛst] | 考試
-afraid | a/fraid | [əˈfred] | 害怕的
-forget | for/get | [fɚˈgɛt] | 忘記
-fresh | fresh | [frɛʃ] | 新鮮的
-count in | count/in | [kaʊnt ɪn] | 算...一份
-begin | be/gin | [bɪˈgɪn] | 開始
-meeting | meet/ing | [ˈmitɪŋ] | 會議
-come on | come/on | [kʌm ɑn] | 快點
-excuse | ex/cuse | [ɪkˈskjus] | 藉口
-around the corner | a/round/the/cor/ner | [əˈraʊnd ðə ˈkɔrnɚ] | 即將來臨
-grade | grade | [gred] | 成績
-hold back | hold/back | [hold bæk] | 阻礙
-few | few | [fju] | 很少
-simple | sim/ple | [ˈsɪmp!] | 簡單的
-expect | ex/pect | [ɪkˈspɛkt] | 預計
-mistake | mis/take | [mɪˈstek] | 錯誤
-angle | an/gle | [ˈæŋg!] | 角度
-allow | al/low | [əˈlaʊ] | 允許
-laugh | laugh | [læf] | 笑
-keep in mind | keep/in/mind | [kip ɪn maɪnd] | 記住
-# Reading
-honest | hon/est | [ˈɑnɪst] | 誠實的
-lead to | lead/to | [lid tu] | 導致
-push | push | [pʊʃ] | 推
-excellent | ex/cel/lent | [ˈɛkslənt] | 優秀的
-be able to | be/a/ble/to | [bi ˈeb! tu] | 能夠
-define | de/fine | [dɪˈfaɪn] | 下定義
-matter | mat/ter | [ˈmætɚ] | 重要
-picture | pic/ture | [ˈpɪktʃɚ] | 想像
-as for | as/for | [æz fɔr] | 至於
-to the full | to/the/full | [tu ðə fʊl] | 盡可能`
+        // Vocabulary data is loaded from moe_vocab_data.json (the only vocabulary source).
+        let sourceVocabulary = null;
+        let currentBook = "B1";
+        let activeUnitData = {};
+        const recordsToLegacyUnit = records => {
+            const rows = [];
+            let section = "dialogue";
+            records.forEach(record => {
+                if (record.section === "reading" && section !== "reading") {
+                    rows.push("# Reading");
+                    section = "reading";
+                }
+                rows.push([record.word, record.syllables, record.phonetic, record.meaning].join(" | "));
+            });
+            return rows.join("\n");
+        };
+        const getBookUnits = bookCode => Object.fromEntries(
+            Object.entries(sourceVocabulary.books[bookCode].units).map(([unit, value]) =>
+                [unit, recordsToLegacyUnit(value.records)]
+            )
+        );
+        const loadVocabularyData = async () => {
+            const response = await fetch("./moe_vocab_data.json", { cache: "no-store" });
+            if (!response.ok) throw new Error(`Vocabulary data load failed: ${response.status}`);
+            sourceVocabulary = await response.json();
+            if (!sourceVocabulary.books || sourceVocabulary.record_count !== 683) {
+                throw new Error("Vocabulary data validation failed.");
+            }
+            activeUnitData = getBookUnits(currentBook);
         };
 
         // Current State
@@ -1099,7 +895,7 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
         ];
 
         // --- INITIALIZATION ---
-        window.onload = function() {
+        window.onload = async function() {
             const today = new Date();
             document.getElementById('report-date').innerText = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
             
@@ -1151,7 +947,13 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
                 }
             }
 
-            loadUnitData('U6');
+            try {
+                await loadVocabularyData();
+                loadUnitData('U6');
+            } catch (error) {
+                console.error(error);
+                alert('無法載入教材單字資料：' + error.message);
+            }
             
             // Add Enter key listener for Task 6
             document.getElementById('t6-input').addEventListener('keypress', function (e) {
@@ -1179,13 +981,13 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
             const zone = document.getElementById('teacher-edit-zone');
             zone.classList.toggle('hidden');
             if(!zone.classList.contains('hidden')) {
-                document.getElementById('teacherInput').value = unitData[currentUnit];
+                document.getElementById('teacherInput').value = activeUnitData[currentUnit];
             }
         }
 
         function saveTeacherData() {
             const newData = document.getElementById('teacherInput').value;
-            unitData[currentUnit] = newData;
+            activeUnitData[currentUnit] = newData;
             loadUnitData(currentUnit);
             toggleTeacherMode();
             alert("單字已更新！(注意：此更新僅限本次使用，若要在 Google Site 永久生效，請複製文字並修改原始碼中的 unitData)");
@@ -1240,7 +1042,7 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
         function parseImportedText(text) {
             const lines = text.split('\n');
             let currentParseUnit = document.getElementById('unitSelector').value; 
-            let parsedData = { ...unitData }; 
+            let parsedData = { ...activeUnitData }; 
             let currentBuffer = [];
             const foundUnits = new Set();
             let hasValidData = false;
@@ -1294,7 +1096,7 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
             if (foundUnits.size > 0) {
                 // 將解析後的資料覆寫進全域變數
                 Object.keys(parsedData).forEach(k => {
-                    unitData[k] = parsedData[k];
+                    activeUnitData[k] = parsedData[k];
                 });
                 
                 // 動態增加不存在的 Unit 選項到下拉選單
@@ -1311,12 +1113,18 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
 
                 alert("成功從 PDF 擷取單字！\n偵測到單元：" + Array.from(foundUnits).join(', ') + "\n請在下方文字方塊檢查格式，確認無誤後點擊「儲存並更新」。");
                 selector.value = Array.from(foundUnits)[0];
-                document.getElementById('teacherInput').value = unitData[selector.value];
+                document.getElementById('teacherInput').value = activeUnitData[selector.value];
             } else {
                 // 若格式太亂無法自動分類，則純文字貼上讓老師手動處理
                 document.getElementById('teacherInput').value += '\n' + text;
                 alert("未能自動偵測到標準的單字格式或 Unit 標籤。\n已將擷取的原始文字附加至文字方塊中，請手動調整排版。");
             }
+        }
+
+        function changeBook() {
+            currentBook = document.getElementById('bookSelector').value;
+            activeUnitData = getBookUnits(currentBook);
+            loadUnitData(document.getElementById('unitSelector').value);
         }
 
         function changeUnit() {
@@ -1342,7 +1150,7 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
         }
 
         function getStorageKey() {
-            return `VA_Data_${currentStudentId}_${currentUnit}`;
+            return `VA_Data_${currentStudentId}_${currentBook}_${currentUnit}`;
         }
 
         function saveProgress() {
@@ -1410,7 +1218,7 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
             document.getElementById('unitSelector').value = unit;
             document.getElementById('header-unit-display').innerText = document.getElementById('unitSelector').options[document.getElementById('unitSelector').selectedIndex].text;
             
-            parseData(unitData[unit]);
+            parseData(activeUnitData[unit]);
 
             // If user is already logged in, reload their progress for this new unit
             if(currentStudentId) {
@@ -2434,3 +2242,4 @@ to the full | to/the/full | [tu ðə fʊl] | 盡可能`
     </script>
 </body>
 </html>
+
